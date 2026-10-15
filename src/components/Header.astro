@@ -1,0 +1,17 @@
+---
+import { SITE_TITLE, SITE_TAGLINE } from '../consts';
+import { url } from '../utils';
+---
+
+<header class="site-header">
+  <a class="brand" href={url('/')}>
+    <img src={url('/favicon.svg')} alt="" width="28" height="28" />
+    <span>{SITE_TITLE}</span>
+  </a>
+  <p class="tagline">{SITE_TAGLINE}</p>
+  <nav>
+    <a href={url('/posts/')}>Archive</a>
+    <a href={url('/about/')}>About</a>
+    <a href={url('/rss.xml')}>RSS</a>
+  </nav>
+</header>

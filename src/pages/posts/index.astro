@@ -1,0 +1,12 @@
+---
+import Base from '../../layouts/Base.astro';
+import PostList from '../../components/PostList.astro';
+import { getPublishedPosts } from '../../utils';
+
+const posts = await getPublishedPosts();
+---
+
+<Base title="Archive" description="Every post on Rookery.">
+  <h1>Archive</h1>
+  {posts.length > 0 ? <PostList posts={posts} /> : <p class="empty">Nothing here yet.</p>}
+</Base>
