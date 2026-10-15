@@ -15,7 +15,10 @@ const posts = (await getPublishedPosts()).slice(0, 10);
   </section>
   {
     posts.length > 0 ? (
-      <PostList posts={posts} />
+      <>
+        <h2 class="section-heading">Latest posts</h2>
+        <PostList posts={posts} />
+      </>
     ) : (
       <p class="empty">The first post is on its way. Subscribe by RSS to catch it.</p>
     )
