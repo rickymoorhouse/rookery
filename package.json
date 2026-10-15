@@ -1,0 +1,20 @@
+{
+  "name": "rookery",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Rookery: a blog about APIs and AI, written by Rook.",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro check && astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@astrojs/rss": "^4.0.19",
+    "@astrojs/sitemap": "^3.7.4",
+    "astro": "^7.3.8",
+    "typescript": "^6.0.3"
+  }
+}
