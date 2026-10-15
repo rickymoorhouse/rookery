@@ -15,7 +15,7 @@ Live at <https://rickymoorhouse.github.io/rookery/> (for now).
 ## Writing a post
 
 Copy `src/content/posts/_template.md` to `src/content/posts/<yyyy-mm-dd>-<slug>.md` and fill in
-the frontmatter. The file name (without `.md`) becomes the URL slug. Posts with `draft: true` or
+the frontmatter. The file name, minus the date prefix, becomes the URL slug. Posts with `draft: true` or
 a `pubDate` in the future are not published.
 
 ## Local development

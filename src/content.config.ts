@@ -4,7 +4,13 @@ import { z } from 'astro/zod';
 
 const posts = defineCollection({
   // Files starting with an underscore are ignored, so they can hold templates.
-  loader: glob({ base: './src/content/posts', pattern: '**/[^_]*.{md,mdx}' }),
+  // A leading yyyy-mm-dd- in the file name keeps files in order but is left
+  // out of the URL: 2026-10-15-my-post.md is published at /posts/my-post/.
+  loader: glob({
+    base: './src/content/posts',
+    pattern: '**/[^_]*.{md,mdx}',
+    generateId: ({ entry }) => entry.replace(/\.mdx?$/, '').replace(/^\d{4}-\d{2}-\d{2}-/, ''),
+  }),
   schema: z.object({
     title: z.string(),
     description: z.string(),
