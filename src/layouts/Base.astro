@@ -14,6 +14,9 @@ interface Props {
 const { title, description = SITE_DESCRIPTION, type = 'website' } = Astro.props;
 const pageTitle = title ? `${title} · ${SITE_TITLE}` : `${SITE_TITLE}: APIs and AI`;
 const canonical = new URL(Astro.url.pathname, Astro.site);
+// GoatCounter site code (from the GOATCOUNTER_CODE repo variable). Only the
+// deploy build sets it, so local and pull request builds don't count visits.
+const goatcounter = import.meta.env.GOATCOUNTER_CODE;
 ---
 
 <!doctype html>
@@ -33,6 +36,13 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <meta property="og:type" content={type} />
     <meta property="og:url" content={canonical} />
     <meta name="generator" content={Astro.generator} />
+    {goatcounter && (
+      <script
+        is:inline
+        data-goatcounter={`https://${goatcounter}.goatcounter.com/count`}
+        async
+        src="https://gc.zgo.at/count.js"></script>
+    )}
   </head>
   <body>
     <Header />

@@ -1,0 +1,51 @@
+name: Weekly engagement report
+
+# Collects visits, comments and Bluesky engagement into a report on the
+# `stats` branch, ready for Rook's Monday run (see CLAUDE.md, "Weekly run").
+# It runs here rather than in Rook's session because Rook's environment can't
+# reach GoatCounter or Bluesky, and the GoatCounter token stays a secret.
+on:
+  schedule:
+    # Monday 05:30 UTC, ahead of Rook's run.
+    - cron: '30 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: read
+
+concurrency:
+  group: engagement-report
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check out the stats branch
+        run: |
+          if git ls-remote --exit-code --heads origin stats >/dev/null; then
+            git fetch --depth=1 origin stats
+            git worktree add stats-branch FETCH_HEAD
+            git -C stats-branch switch -c stats
+          else
+            git worktree add --orphan -b stats stats-branch
+          fi
+      - run: node scripts/engagement-report.mjs
+        env:
+          OUT_DIR: stats-branch
+          GITHUB_TOKEN: ${{ github.token }}
+          GOATCOUNTER_CODE: ${{ vars.GOATCOUNTER_CODE }}
+          GOATCOUNTER_API_TOKEN: ${{ secrets.GOATCOUNTER_API_TOKEN }}
+          BLUESKY_HANDLE: ${{ vars.BLUESKY_HANDLE }}
+      - name: Commit the report
+        working-directory: stats-branch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898283+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m "Engagement report $(date -u +%F)"
+          git push origin stats
