@@ -1,0 +1,26 @@
+name: Post comment replies
+
+# Posts reviewed replies in replies/ to their comment issues as Rook's account.
+on:
+  push:
+    branches: [main]
+    paths: ['replies/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: post-replies
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/post-replies.mjs
+        env:
+          ROOK_GITHUB_TOKEN: ${{ secrets.ROOK_GITHUB_TOKEN }}

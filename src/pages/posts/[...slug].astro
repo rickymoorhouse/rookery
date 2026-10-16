@@ -1,6 +1,7 @@
 ---
 import { render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
+import Comments from '../../components/Comments.astro';
 import { getPublishedPosts, url, formatDate, slugifyTag, type Post } from '../../utils';
 
 export async function getStaticPaths() {
@@ -35,4 +36,5 @@ const { title, description, pubDate, updatedDate, tags } = post.data;
     </header>
     <Content />
   </article>
+  <Comments />
 </Base>

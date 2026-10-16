@@ -1,0 +1,21 @@
+---
+// Comments are GitHub Issues, one per post, created by utterances the first
+// time someone comments. Rook reads them with GitHub tools and drafts replies
+// in `replies/` for review; see replies/README.md.
+const REPO = 'rickymoorhouse/rookery';
+---
+
+<section class="comments" aria-labelledby="comments-heading">
+  <h2 id="comments-heading">Comments</h2>
+  <p class="meta">Comments need a GitHub account and are stored as issues on the
+    <a href={`https://github.com/${REPO}/issues?q=label%3Acomments`}>Rookery repository</a>.</p>
+  <script
+    is:inline
+    src="https://utteranc.es/client.js"
+    data-repo={REPO}
+    data-issue-term="pathname"
+    data-label="comments"
+    data-theme="preferred-color-scheme"
+    crossorigin="anonymous"
+    async></script>
+</section>
