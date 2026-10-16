@@ -1,0 +1,113 @@
+import assert from 'node:assert/strict';
+import { createServer } from 'node:http';
+import { mkdtemp, readFile, mkdir } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { test } from 'node:test';
+import { htmlToText, makeTools, runAgent } from '../lib/agent.mjs';
+import { fromOpenAI, Models, toOpenAI } from '../lib/models.mjs';
+
+// A stand-in for an OpenAI-compatible server (Ollama) that plays back scripted replies.
+async function fakeServer(handler) {
+  const requests = [];
+  const server = createServer(async (req, res) => {
+    let body = '';
+    for await (const chunk of req) body += chunk;
+    const parsed = body ? JSON.parse(body) : null;
+    requests.push({ url: req.url, body: parsed });
+    const [status, payload] = handler(req.url, parsed, requests.length);
+    res.writeHead(status, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(payload));
+  });
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  return { url: `http://127.0.0.1:${server.address().port}`, requests, close: () => server.close() };
+}
+
+const toolCall = (id, name, args) => ({
+  choices: [{ finish_reason: 'tool_calls', message: { content: null, tool_calls: [{ id, type: 'function', function: { name, arguments: JSON.stringify(args) } }] } }],
+});
+
+const baseConfig = { model: 'claude-opus-5-5', effort: 'high', localModel: 'test-model', localApiKey: '', localTimeoutMs: 10_000 };
+
+test('converts a conversation to the OpenAI format and back', () => {
+  const messages = [
+    { role: 'user', content: 'Write the post.' },
+    {
+      role: 'assistant',
+      content: [
+        { type: 'thinking', thinking: '', signature: 'x' },
+        { type: 'text', text: 'Reading first.' },
+        { type: 'server_tool_use', id: 'srv', name: 'web_search', input: {} },
+        { type: 'tool_use', id: 't1', name: 'read_file', input: { path: 'IDEAS.md' } },
+      ],
+    },
+    { role: 'user', content: [{ type: 'tool_result', tool_use_id: 't1', content: '# Ideas' }] },
+  ];
+  assert.deepEqual(toOpenAI('sys', messages), [
+    { role: 'system', content: 'sys' },
+    { role: 'user', content: 'Write the post.' },
+    { role: 'assistant', content: 'Reading first.', tool_calls: [{ id: 't1', type: 'function', function: { name: 'read_file', arguments: '{"path":"IDEAS.md"}' } }] },
+    { role: 'tool', tool_call_id: 't1', content: '# Ideas' },
+  ]);
+
+  const turn = fromOpenAI({ choices: [{ finish_reason: 'stop', message: { content: '<think>hmm</think>All done.' } }] });
+  assert.deepEqual(turn, { content: [{ type: 'text', text: 'All done.' }], stop_reason: 'end_turn' });
+  assert.equal(fromOpenAI(toolCall('c1', 'finish', { title: 'x' })).stop_reason, 'tool_use');
+});
+
+test('falls back to the local model when the Anthropic API fails', async () => {
+  const anthropic = await fakeServer(() => [400, { type: 'error', error: { type: 'invalid_request_error', message: 'nope' } }]);
+  const local = await fakeServer(() => [200, { choices: [{ finish_reason: 'stop', message: { content: 'Hello from local.' } }] }]);
+  process.env.ANTHROPIC_BASE_URL = anthropic.url;
+  try {
+    const logs = [];
+    const models = new Models({ ...baseConfig, anthropicApiKey: 'test-key', localBaseUrl: `${local.url}/v1` }, (m) => logs.push(m));
+    const tools = [{ name: 'fetch_url', localOnly: true, description: 'd', input_schema: { type: 'object', properties: {} } }];
+    const turn = await models.turn({ system: 's', messages: [{ role: 'user', content: 'hi' }], tools });
+    assert.equal(turn.content[0].text, 'Hello from local.');
+    assert.equal(models.usingLocal, true);
+    assert.match(models.fallbackReason, /400/);
+    assert.match(models.describe(), /test-model \(local\)/);
+    // The local model gets the local-only tools; the API request did not.
+    assert.equal(local.requests[0].body.tools[0].function.name, 'fetch_url');
+    assert.equal(anthropic.requests[0].body.tools.some((t) => t.name === 'fetch_url'), false);
+    // Once fallen back, later turns go straight to the local model.
+    await models.turn({ system: 's', messages: [{ role: 'user', content: 'again' }], tools });
+    assert.equal(anthropic.requests.length, 1);
+  } finally {
+    delete process.env.ANTHROPIC_BASE_URL;
+    anthropic.close();
+    local.close();
+  }
+});
+
+test('runs the agent loop: writes an allowed file, refuses others, then finishes', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rook-'));
+  await mkdir(join(root, 'replies'));
+  const script = [
+    toolCall('a', 'write_file', { path: 'VOICE.md', content: 'hijack' }),
+    toolCall('b', 'read_file', { path: '../../etc/passwd' }),
+    toolCall('c', 'finish', { title: 'Replies: 2026-10-19', description: 'too soon' }),
+    toolCall('d', 'write_file', { path: 'replies/12-thanks.md', content: '---\nissue: 12\n---\n\nThanks.' }),
+    toolCall('e', 'finish', { title: 'Replies: 2026-10-19', description: 'One reply.' }),
+  ];
+  const local = await fakeServer((url, body, n) => [200, script[n - 1]]);
+  try {
+    const models = new Models({ ...baseConfig, anthropicApiKey: '', localBaseUrl: `${local.url}/v1` }, () => {});
+    const { tools, state } = makeTools({ root, writable: [/^replies\/\d+-[a-z0-9-]+\.md$/], log: () => {} });
+    const result = await runAgent({ models, system: 's', prompt: 'p', tools, state, maxTurns: 10, log: () => {} });
+    assert.deepEqual(result, { title: 'Replies: 2026-10-19', description: 'One reply.', skip: false });
+    assert.equal(await readFile(join(root, 'replies/12-thanks.md'), 'utf8'), '---\nissue: 12\n---\n\nThanks.\n');
+    const results = local.requests.slice(1).map((r) => r.body.messages.at(-1).content);
+    assert.match(results[0], /Not allowed to write VOICE.md/);
+    assert.match(results[1], /outside the repository/);
+    assert.match(results[2], /Nothing has been written yet/);
+  } finally {
+    local.close();
+  }
+});
+
+test('turns HTML into readable text with links kept', () => {
+  const text = htmlToText('<html><script>x()</script><p>See <a href="https://example.com/spec">the spec</a>.</p><p>Done &amp; dusted</p></html>');
+  assert.equal(text, 'See the spec (https://example.com/spec).\nDone & dusted');
+});
