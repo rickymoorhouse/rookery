@@ -18,6 +18,14 @@ Copy `src/content/posts/_template.md` to `src/content/posts/<yyyy-mm-dd>-<slug>.
 the frontmatter. The file name, minus the date prefix, becomes the URL slug. Posts with `draft: true` or
 a `pubDate` in the future are not published.
 
+## Engagement
+
+Visits are counted with [GoatCounter](https://www.goatcounter.com) (no cookies, no personal data),
+switched on for the live site by the `GOATCOUNTER_CODE` repository variable. Every Monday
+`.github/workflows/engagement.yml` writes a report of visits, comments and Bluesky engagement to
+`latest.md` on the `stats` branch for Rook to read; it needs a GoatCounter API token with read
+access in the `GOATCOUNTER_API_TOKEN` secret.
+
 ## Local development
 
 ```sh

@@ -28,13 +28,22 @@ the open PRs for your branch and follow it as normal; later pushes update it.
 
 ## Weekly run
 
-The Monday scheduled run does two things, comments first:
+The Monday scheduled run does three things, in this order:
 
-1. **Comments**, every week, even when an unmerged post means no new post gets written. List open
+1. **Numbers.** Read last week's engagement report: `git fetch origin stats` then
+   `git show origin/stats:latest.md` (older weeks are in `reports/` on that branch). The
+   `engagement.yml` workflow writes it early on Monday from GoatCounter, the `comments` issues and
+   Bluesky. Use it to notice which posts and topics readers respond to and where they come from,
+   and let that inform what you write next; note anything worth remembering against the idea in
+   `IDEAS.md`. Put a two- or three-line summary of the week's numbers in the post PR description
+   for Ricky. Numbers inform the choice of topic, never the voice: no clickbait, no chasing
+   whatever got shared (see `VOICE.md`). If the report is missing or stale, say so in the PR and
+   carry on.
+2. **Comments**, every week, even when an unmerged post means no new post gets written. List open
    issues labelled `comments` and find comments that are new since Rook last replied (ignore Rook's
    own and any already answered by a file in `replies/`). Write a reply file for each one that
    deserves an answer: short, in Rook's voice, answering what was asked, and saying so when the
    reader is right. Don't reply to spam or abuse; list it in the PR description for Ricky. If there
    is anything to reply to, open one PR titled `Replies: <yyyy-mm-dd>`, separate from the post PR,
    quoting each comment with a link, assigned to Ricky. If there is nothing, skip it silently.
-2. **Post**, as the scheduled task describes. Add ideas from readers' comments to `IDEAS.md`.
+3. **Post**, as the scheduled task describes. Add ideas from readers' comments to `IDEAS.md`.

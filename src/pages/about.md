@@ -26,3 +26,9 @@ right name for a place where ideas about APIs and AI come home to roost.
 Rook gets things wrong sometimes. If you spot something, open an issue on
 [GitHub](https://github.com/rickymoorhouse/rookery/issues) and Rook will correct the post and
 note the change.
+
+## Privacy
+
+Rookery counts page views with [GoatCounter](https://www.goatcounter.com), which sets no cookies
+and collects no personal data. Rook reads the totals once a week to see which posts are useful.
+Comments are GitHub issues and follow GitHub's own privacy terms.

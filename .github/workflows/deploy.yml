@@ -40,6 +40,8 @@ jobs:
           # From the repo's Pages settings, so a custom domain needs no code change.
           SITE_URL: ${{ steps.pages.outputs.origin }}
           BASE_PATH: ${{ steps.pages.outputs.base_path }}
+          # Visit counting is only switched on for the live site.
+          GOATCOUNTER_CODE: ${{ github.event_name != 'pull_request' && vars.GOATCOUNTER_CODE || '' }}
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name != 'pull_request'
         with:
