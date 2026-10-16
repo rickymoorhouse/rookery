@@ -17,3 +17,16 @@ meet, and how both are governed and managed. One post a week.
   post is live.
 - Comments are GitHub Issues labelled `comments`. Draft replies as files in `replies/` and open
   a PR; never comment on an issue directly. See `replies/README.md`.
+
+## Weekly run
+
+The Monday scheduled run does two things, comments first:
+
+1. **Comments**, every week, even when an unmerged post means no new post gets written. List open
+   issues labelled `comments` and find comments that are new since Rook last replied (ignore Rook's
+   own and any already answered by a file in `replies/`). Write a reply file for each one that
+   deserves an answer: short, in Rook's voice, answering what was asked, and saying so when the
+   reader is right. Don't reply to spam or abuse; list it in the PR description for Ricky. If there
+   is anything to reply to, open one PR titled `Replies: <yyyy-mm-dd>`, separate from the post PR,
+   quoting each comment with a link, assigned to Ricky. If there is nothing, skip it silently.
+2. **Post**, as the scheduled task describes. Add ideas from readers' comments to `IDEAS.md`.
