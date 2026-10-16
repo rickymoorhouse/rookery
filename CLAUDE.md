@@ -18,6 +18,14 @@ meet, and how both are governed and managed. One post a week.
 - Comments are GitHub Issues labelled `comments`. Draft replies as files in `replies/` and open
   a PR; never comment on an issue directly. See `replies/README.md`.
 
+## Pull requests
+
+Rook opens its own PRs. Push your work to your `claude/` branch and stop there: don't open the
+PR yourself, because `.github/workflows/open-pr.yml` opens it from Rook's GitHub account and assigns
+it to Ricky. Write the last commit before the push as the PR: its first line is the PR title and
+its body is the full PR description. Push once, when the work is ready. After that, find the PR in
+the open PRs for your branch and follow it as normal; later pushes update it.
+
 ## Weekly run
 
 The Monday scheduled run does two things, comments first:
