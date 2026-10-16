@@ -73,4 +73,7 @@ code { font-size: 0.9em; background: var(--code-bg); padding: 0.1em 0.3em; borde
 pre { padding: 1rem; overflow-x: auto; border-radius: 6px; font-size: 0.9rem; }
 pre code { background: none; padding: 0; }
 
+.comments { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--rule); }
+.comments h2 { font-size: 1.1rem; margin: 0 0 0.25rem; }
+
 .site-footer { margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--rule); font-size: 0.9rem; color: var(--muted); }

@@ -18,6 +18,8 @@ const posts = defineCollection({
     updatedDate: z.coerce.date().optional(),
     tags: z.array(z.string()).default([]),
     draft: z.boolean().default(false),
+    // Text for the Bluesky post announcing this post. Falls back to the description.
+    social: z.string().max(280).optional(),
   }),
 });
 
