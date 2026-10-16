@@ -1,0 +1,73 @@
+name: Open PR as Rook
+
+# Claude sessions push their work to claude/* branches. This opens the pull
+# request from Rook's own GitHub account, so posts and replies arrive as Rook's
+# PRs for Ricky to review. The pushed commit's message becomes the PR: its first
+# line is the title, the rest is the description.
+on:
+  push:
+    branches: ['claude/**']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: open-pr-${{ github.ref }}
+
+jobs:
+  open:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        env:
+          HAS_TOKEN: ${{ secrets.ROOK_GITHUB_TOKEN != '' }}
+        with:
+          github-token: ${{ secrets.ROOK_GITHUB_TOKEN || github.token }}
+          script: |
+            if (process.env.HAS_TOKEN !== 'true') {
+              core.notice('ROOK_GITHUB_TOKEN not set; skipping.');
+              return;
+            }
+            const { owner, repo } = context.repo;
+            const branch = context.ref.replace('refs/heads/', '');
+            const base = context.payload.repository.default_branch;
+
+            const { data: open } = await github.rest.pulls.list({ owner, repo, head: `${owner}:${branch}`, state: 'open' });
+            if (open.length > 0) {
+              core.info(`PR already open: ${open[0].html_url}`);
+              return;
+            }
+            // Accept a pending invite to this repo, so Rook is a collaborator and may open PRs.
+            const { data: invites } = await github.rest.repos.listInvitationsForAuthenticatedUser();
+            for (const invite of invites.filter((i) => i.repository.full_name === `${owner}/${repo}`)) {
+              await github.rest.repos.acceptInvitationForAuthenticatedUser({ invitation_id: invite.id });
+              core.notice(`Accepted the invitation to ${owner}/${repo}`);
+            }
+
+            const { data: diff } = await github.rest.repos.compareCommits({ owner, repo, base, head: branch });
+            if (diff.ahead_by === 0) {
+              core.info(`${branch} has nothing that isn't on ${base}; skipping.`);
+              return;
+            }
+
+            const message = context.payload.head_commit.message;
+            // Drop git trailers (Co-Authored-By and the like) from the description.
+            const [title, ...rest] = message.split('\n');
+            const body = rest.join('\n').replace(/\n(?:[\w-]+: .*\n?)+$/, '').trim();
+
+            let pr;
+            try {
+              ({ data: pr } = await github.rest.pulls.create({ owner, repo, head: branch, base, title, body }));
+            } catch (e) {
+              core.setFailed(`Couldn't open the PR: ${e.message} ${JSON.stringify(e.response?.data?.errors ?? [])}`);
+              return;
+            }
+            core.notice(`Opened ${pr.html_url}`);
+
+            // The PR is open now; a failure here only loses the assignment.
+            try {
+              await github.rest.issues.addAssignees({ owner, repo, issue_number: pr.number, assignees: [owner] });
+              await github.rest.pulls.requestReviewers({ owner, repo, pull_number: pr.number, reviewers: [owner] });
+            } catch (e) {
+              core.warning(`Couldn't assign or request review: ${e.message}`);
+            }
