@@ -1,0 +1,17 @@
+{
+  "name": "rookery-runner",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Runs Rook's weekly post and comment replies from your own machine.",
+  "bin": { "rook": "rook.mjs" },
+  "scripts": {
+    "start": "node rook.mjs",
+    "check": "node rook.mjs --check",
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.135.0"
+  }
+}

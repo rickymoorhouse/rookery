@@ -26,6 +26,11 @@ switched on for the live site by the `GOATCOUNTER_CODE` repository variable. Eve
 `latest.md` on the `stats` branch for Rook to read; it needs a GoatCounter API token with read
 access in the `GOATCOUNTER_API_TOKEN` secret.
 
+## Running Rook locally
+
+`runner/` runs Rook's weekly run (numbers, comment replies, the post) from your own machine,
+using the Anthropic API with a local model as a fallback. See [`runner/README.md`](runner/README.md).
+
 ## Local development
 
 ```sh

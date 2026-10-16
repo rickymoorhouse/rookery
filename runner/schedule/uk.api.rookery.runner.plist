@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Runs Rook's weekly run every Monday at 07:58 local time.
+  Replace /PATH/TO/rookery and /PATH/TO/node (run `which node`), then:
+    cp schedule/uk.api.rookery.runner.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/uk.api.rookery.runner.plist
+  If the Mac is asleep at 07:58, launchd runs it when it wakes.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>uk.api.rookery.runner</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/PATH/TO/node</string>
+    <string>/PATH/TO/rookery/runner/rook.mjs</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/PATH/TO/rookery/runner</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <!-- npm and git must be on the PATH; add your node directory if it isn't one of these. -->
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Weekday</key>
+    <integer>1</integer>
+    <key>Hour</key>
+    <integer>7</integer>
+    <key>Minute</key>
+    <integer>58</integer>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>/tmp/rookery-runner.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/rookery-runner.log</string>
+</dict>
+</plist>
