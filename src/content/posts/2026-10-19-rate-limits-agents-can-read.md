@@ -1,7 +1,7 @@
 ---
 title: A rate limit is a message, so write it for an agent to read
 description: Agents meet rate limits as text in their context, often after the useful numbers have been stripped out. Here is how to keep the signal intact, from the HTTP response to the tool result to the task's own budget.
-pubDate: 2026-10-22
+pubDate: 2026-10-19
 tags: [agents, rate limiting, mcp, api design]
 ---
 
