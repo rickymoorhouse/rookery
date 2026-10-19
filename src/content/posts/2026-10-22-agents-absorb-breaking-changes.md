@@ -13,10 +13,8 @@ records. Whether the answer is still right is another matter. That makes version
 important for agents, not less, and it moves the audience for deprecation signals away from
 the model and towards the people who run it.
 
-This is the third post in a loose run about agents as API clients. The
-[first](../every-agent-is-an-api-client/) argued that agents need the API governance we already
-have, applied harder. [On Monday](../rate-limits-agents-can-read/) I looked at what an agent
-sees when it is told to slow down. This one is about what it sees when the API it depends on
+This follows [Monday's post](../rate-limits-agents-can-read/) on rate limits and the
+[first one](../every-agent-is-an-api-client/) on agents as API clients. This time the API
 changes.
 
 ## Loud failure was a feature
@@ -29,11 +27,27 @@ is missing, deserialisation throws, and the integration test that checks an orde
 red. The failure is annoying, and it is also exactly what you want. It is early, it is loud,
 and it lands on the person who owns the integration.
 
-Now give the same response to an agent with a tool that wraps that endpoint. There is no
-deserialiser. The model reads JSON as text, sees `amount: 4999` where it used to see
-`total: 49.99`, and does what language models are good at: it infers. Often it infers well.
-Sometimes it tells a customer their order came to £4,999. Either way, the tool call returned
-200, the task completed, and nothing in the host's metrics moved.
+Now put a tool between that endpoint and an agent. The tool is ordinary code, so it depends on
+how the tool was written, and there are roughly three ways.
+
+A thin tool passes the JSON through as text. That is common for tools generated from an API
+description, and for generic "call this endpoint" tools. Here there is no deserialiser at all.
+The model sees `amount: 4999` where it used to see `total: 49.99` and does what language models
+are good at: it infers.
+
+A tool that parses the response, written in a forgiving language, often looks up `total`,
+gets nothing back, and returns an order with no total, or a total of `null`. The model fills
+the gap from whatever else is in its context.
+
+A strict tool throws, which is the compiled client again, and it is the right design. But look
+at where the exception goes. The tool reports the failure as a result for the model to read,
+as Monday's post described, and the model does what it was built to do: tries another tool,
+answers from what it already knows, or tells the user it couldn't find the total. The loud
+failure happened, one level down, and the model absorbed it.
+
+None of the three helps with the unit change. Any parser accepts `4999` as a number. Often the
+model infers well; sometimes it tells a customer their order came to £4,999. Either way the
+task completed, and nothing in the host's metrics moved.
 
 [Hyrum's Law](https://www.hyrumslaw.com/) says that with enough users, every observable
 behaviour of a system will be depended on by somebody. Agents widen "observable" to include
@@ -110,9 +124,8 @@ release. Diff it, review it, and note it somewhere the owner will see.
 
 ## The case for letting agents adapt
 
-The strongest objection is that tolerance is the point. Generated SDKs are brittle, and a
-client that survives a renamed field is a better client. If agents shrug off cosmetic changes,
-API providers can evolve faster and nobody has to coordinate a release with every consumer.
+The strongest objection is that tolerance is the point. A client that survives a renamed field
+is a better client, and if agents shrug off cosmetic changes, providers can evolve faster.
 
 I agree with half of that. Tolerance at runtime is good. A model that can cope with a new
 optional field or a reworded error message saves real work. The trouble is that the model
