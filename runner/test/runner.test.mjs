@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
+import { execFile } from 'node:child_process';
 import { mkdtemp, readFile, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
 import { test } from 'node:test';
 import { htmlToText, makeTools, runAgent } from '../lib/agent.mjs';
 import { fromOpenAI, Models, toOpenAI } from '../lib/models.mjs';
@@ -110,4 +113,20 @@ test('runs the agent loop: writes an allowed file, refuses others, then finishes
 test('turns HTML into readable text with links kept', () => {
   const text = htmlToText('<html><script>x()</script><p>See <a href="https://example.com/spec">the spec</a>.</p><p>Done &amp; dusted</p></html>');
   assert.equal(text, 'See the spec (https://example.com/spec).\nDone & dusted');
+});
+
+test('publish.mjs starts the deploy workflow on the default branch', async () => {
+  const gh = await fakeServer((url) => (url.endsWith('/dispatches') ? [204, null] : [200, { default_branch: 'main' }]));
+  try {
+    const home = await mkdtemp(join(tmpdir(), 'rook-'));
+    const script = join(dirname(fileURLToPath(import.meta.url)), '..', 'publish.mjs');
+    const { stdout } = await promisify(execFile)(process.execPath, [script], {
+      env: { ...process.env, ROOK_ENV_FILE: '/dev/null', ROOK_HOME: home, ROOK_GITHUB_TOKEN: 't', ROOK_REPO: 'o/r', ROOK_GITHUB_API: gh.url },
+    });
+    assert.match(stdout, /Triggered deploy.yml on o\/r@main/);
+    assert.deepEqual(gh.requests.map((r) => r.url), ['/repos/o/r', '/repos/o/r/actions/workflows/deploy.yml/dispatches']);
+    assert.deepEqual(gh.requests[1].body, { ref: 'main' });
+  } finally {
+    gh.close();
+  }
 });
