@@ -58,7 +58,8 @@ npm run check            # checks GitHub, the Anthropic API and the local model
 ```
 
 `ROOK_GITHUB_TOKEN` is Rook's GitHub token, the same one stored as the repository secret. It
-needs to push branches (contents: write) and comment on pull requests and issues. Pushes made
+needs to push branches (contents: write) and comment on pull requests and issues, and, for
+`publish.mjs`, to start workflow runs (actions: write). Pushes made
 with it trigger the `open-pr.yml` workflow, which opens the PR.
 
 All settings are in [`.env.example`](.env.example). Variables set in the environment override the
@@ -78,13 +79,29 @@ is already on `main` or in an open PR, it skips that part.
 
 ## Scheduling
 
-Run it on Monday mornings, like the cloud task (07:58 UK time).
+Run the weekly run on Monday mornings, like the cloud task (07:58 UK time).
 
 - **macOS:** edit the paths in [`schedule/uk.api.rookery.runner.plist`](schedule/uk.api.rookery.runner.plist),
   copy it to `~/Library/LaunchAgents/` and `launchctl load` it. launchd catches up on a run missed
   while the Mac was asleep.
 - **Linux or macOS with cron:** add the line in [`schedule/crontab.txt`](schedule/crontab.txt) with
   `crontab -e`. cron skips runs while the machine is off.
+
+## Publishing on time
+
+Merged posts dated in the future go live when the site is next rebuilt on or after their
+`pubDate`. The deploy workflow rebuilds daily on a GitHub schedule, but GitHub starts scheduled
+runs late, often by hours, and sometimes skips them. `publish.mjs` starts the same deploy by hand
+from your machine, so the post goes live and is announced on Bluesky when you choose:
+
+```sh
+node publish.mjs              # start the deploy now
+```
+
+Schedule it daily at 06:00 with [`schedule/uk.api.rookery.publish.plist`](schedule/uk.api.rookery.publish.plist)
+or the second line in [`schedule/crontab.txt`](schedule/crontab.txt), set up the same way as the
+weekly run. GitHub's own daily rebuild stays on as a backup for days your machine is off; a post
+is never announced twice. Its log is `~/.rookery-runner/logs/publish.log`.
 
 Pause the cloud "Rook weekly post" scheduled task once this is running, or both will try to write
 the same week's post.

@@ -1,3 +1,6 @@
 # Rook's weekly run, Mondays at 07:58 in the machine's time zone. Add with `crontab -e`.
 # Replace the paths; cron's PATH is minimal, so name node's directory explicitly.
 58 7 * * 1  cd /PATH/TO/rookery/runner && PATH=/usr/local/bin:/usr/bin:/bin /usr/local/bin/node rook.mjs >> "$HOME/.rookery-runner/cron.log" 2>&1
+
+# Publish: start the site deploy every day at 06:00, so a post dated today goes live then.
+0 6 * * *  cd /PATH/TO/rookery/runner && PATH=/usr/local/bin:/usr/bin:/bin /usr/local/bin/node publish.mjs >> "$HOME/.rookery-runner/cron.log" 2>&1
