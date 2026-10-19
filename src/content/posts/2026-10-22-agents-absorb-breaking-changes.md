@@ -50,55 +50,59 @@ model infers well; sometimes it tells a customer their order came to £4,999. Ei
 task completed, and nothing in the host's metrics moved.
 
 [Hyrum's Law](https://www.hyrumslaw.com/) says that with enough users, every observable
-behaviour of a system will be depended on by somebody. Agents widen "observable" to include
-field names, the order of keys, the wording of error messages and, for tools, the prose of the
-description. They also change what depending on something looks like. A compiled client
-depends rigidly and breaks. A model depends loosely and drifts.
+behaviour of a system will be depended on by somebody. Agents change what depending on
+something looks like. A compiled client depends rigidly and breaks. A model depends loosely
+and drifts.
 
-## The signals already exist
+## The basics still apply
 
-HTTP has had a vocabulary for this for a while.
-[RFC 8594](https://www.rfc-editor.org/rfc/rfc8594) (May 2019, Informational) defines the
-`Sunset` header: the date after which a resource is likely to stop responding. The RFC is clear
-that the date is a hint, not a promise.
-[RFC 9745](https://www.rfc-editor.org/rfc/rfc9745) (March 2025, Standards Track) adds the
-`Deprecation` header, which says a resource has been or will be deprecated, as a structured
-date. Both define a link relation so the response can point at the migration notes:
+Most of the defence against breaking changes was never in the response at all. It is a
+versioning strategy agreed up front, and communication with consumers. Ricky Moorhouse, who
+reviews these posts, makes the case in
+[API versioning is a contract commitment, not a technical choice](https://rickymoorhouse.uk/blog/2026/api-versioning-is-a-contract-commitment-not-a-technical-choice/):
+additive changes can be invisible to consumers, "as long as clients are told upfront to ignore
+unknown fields"; breaking changes need an explicit, consumer-facing version, whether that is in
+the path, a header or routed by a gateway from the consumer's subscription. His
+[follow-up on API failures](https://rickymoorhouse.uk/blog/2026/api-failure-stories-and-what-they-taught-me/)
+adds the other half: you can only retire a version safely if you know which consumers still
+use it.
+
+All of that carries over to agents, with two catches. The first is that rule about unknown
+fields. A model doesn't ignore them. It reads every field it is given and may use any of
+them, so an "additive" change can still change what an agent does. The second is that the
+consumer you know about, the one with the subscription and the email address on the
+changelog, is usually whoever built the tool or the platform. The agent calling through it,
+and the team running that agent, may never hear about the change.
+
+HTTP also has signals in the response itself.
+[RFC 8594](https://www.rfc-editor.org/rfc/rfc8594) (May 2019) defines a `Sunset` header for
+the date a resource is likely to stop responding, and
+[RFC 9745](https://www.rfc-editor.org/rfc/rfc9745) (March 2025) adds `Deprecation`. Both can
+link to migration notes:
 
 ```http
-HTTP/1.1 200 OK
 Deprecation: @1798761599
 Sunset: Thu, 31 Dec 2026 23:59:59 GMT
 Link: <https://api.example.com/changes/orders-v3>; rel="deprecation"
 ```
 
-The `Deprecation` value is seconds since the epoch, here the last second of 2026. RFC 9745 is
-explicit that the header changes nothing about how the resource behaves; it is information.
-In the API description, [OpenAPI](https://spec.openapis.org/oas/v3.1.0#operation-object) has
-had a `deprecated` flag on operations for years, with the instruction that consumers should
-refrain from using them.
-
-The question is who reads any of this. These signals were designed for a developer who has a
-client library that logs a warning, or who reads a changelog. In an agent stack, the response
-headers usually stop at the tool wrapper, as they did for rate limits on Monday. The
-`deprecated` flag may or may not make it into the tool description, depending on whoever
-generated the tool from the spec.
+[OpenAPI](https://spec.openapis.org/oas/v3.1.0#operation-object) has a `deprecated` flag on
+operations too. Honestly, very little client code checks any of these, compiled or not. They
+are worth sending, because they are cheap and machine-readable, but they are a backstop to the
+versioning strategy and the changelog, not a replacement.
 
 ## Send them to the owner, not the model
 
-On Monday I argued that a rate limit should reach the model with its numbers intact, because
-a long wait can change the agent's plan. Deprecation is different, and I think the right
-answer is the opposite.
-
-A model can't act on "this endpoint is deprecated". It can't migrate the integration, update
-the tool or read the migration guide and redeploy. Telling it mid-task mostly adds a reason to
+Unlike a long rate limit wait, a deprecation is not something a model can act on. It can't
+migrate the integration or update the tool, and telling it mid-task mostly adds a reason to
 second-guess a call that still works. The person who can act is whoever owns the tool or the
 agent, and they are not in the conversation.
 
-So the agent host, or the gateway in front of it, should be the reader. A `Deprecation` or
-`Sunset` header on any upstream response is an event to log against the tool, the API and the
-owner, and to raise when the sunset date gets close. It is the same treatment a good API
-gateway already gives a client still calling a deprecated version, just pointed the other way.
+So the owner has to be a consumer the provider can see. An agent, or the team running it,
+should have its own app and subscription on the APIs it reaches, not borrow the tool vendor's,
+so the changelog email and the usage data both point at someone who can act. And the agent
+host, or the gateway in front of it, should log any `Deprecation` or `Sunset` header it sees
+against the tool, the API and that owner, for the rare provider that sends them.
 
 ## The description is part of the contract
 
@@ -106,11 +110,10 @@ For tools, there is a second surface that HTTP headers don't cover. What the mod
 consumes is the tool's name, its description and its input schema. Change the description and
 you have changed how the model calls the tool, with no version number anywhere.
 
-The Model Context Protocol expects tool lists to change. A server can tell the client its list
-has changed and the client fetches it again; the
+The Model Context Protocol expects tool lists to change: a server can tell the client its list
+has changed and the client fetches it again. The
 [current specification](https://modelcontextprotocol.io/specification/2026-07-28/server/tools)
-also asks servers to keep the list stable for a given caller and in a deterministic order. What
-it doesn't do is say that a changed description is a new version of a tool.
+doesn't say that a changed description is a new version of a tool.
 
 Security people have already noticed this from the other side. In April 2025,
 [Invariant Labs](https://invariantlabs.ai/blog/mcp-security-notification-tool-poisoning-attacks)
@@ -118,9 +121,8 @@ described tool poisoning, where a tool's description carries instructions aimed 
 and the "rug pull", where a server changes a description after the user has approved it. The
 defence that came out of that work is to pin each tool definition by hash and flag any change.
 
-That is a governance control as much as a security one. A malicious change to a description and
-a careless one look the same to the host: different text, same tool name. Treat both as a
-release. Diff it, review it, and note it somewhere the owner will see.
+That is a governance control as much as a security one. A malicious edit and a careless one
+look the same to the host, so treat both as a release: diff it, review it, tell the owner.
 
 ## The case for letting agents adapt
 
@@ -137,8 +139,8 @@ want is an agent that keeps working and a host that says, loudly, that it had to
 
 If you publish an API that agents call:
 
-1. Send `Deprecation` and `Sunset` with a `rel="deprecation"` link, and mark the operation
-   `deprecated` in the OpenAPI description.
+1. Have a versioning and deprecation strategy, know which consumers use each version, and
+   tell them before you change anything. Send `Deprecation` and `Sunset` as well.
 2. Never change what a field means while keeping its name. Units, currency and time zones are
    the usual offenders. A semantic change gets a new field.
 
@@ -153,13 +155,13 @@ If you build tools or MCP servers:
 
 If you run the agent host:
 
-5. Log deprecation headers against the owner of the tool and the API, not into the model's
-   context.
+5. Register each agent as a consumer in its own right, so change notices reach its owner, and
+   log deprecation headers there rather than into the model's context.
 6. Pin tool definitions by hash, and alert on any change.
 7. Keep a small set of fixed tasks with known answers, and rerun them when anything upstream
    changes. It is the closest thing an agent has to the integration test that used to go red.
 
-What I'm still chewing on is whether there is any case for telling the model. One candidate is
-a choice between two tools that do the same job, where one is deprecated. A hint in the
-description might steer it to the right one. But that only works if the hint is written,
-reviewed and versioned like the rest of the contract, which rather proves the point.
+What I'm still chewing on is whether there is ever a case for telling the model. A choice
+between two tools that do the same job, one of them deprecated, might be it. But that hint only
+works if it is written, reviewed and versioned like the rest of the contract, which rather
+proves the point.
