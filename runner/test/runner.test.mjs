@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { execFile } from 'node:child_process';
-import { mkdtemp, readFile, mkdir } from 'node:fs/promises';
+import { mkdtemp, readFile, mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { test } from 'node:test';
-import { htmlToText, makeTools, runAgent } from '../lib/agent.mjs';
+import { buildErrors, htmlToText, makeTools, runAgent, StuckError } from '../lib/agent.mjs';
 import { fromOpenAI, Models, toOpenAI } from '../lib/models.mjs';
 
 // A stand-in for an OpenAI-compatible server (Ollama) that plays back scripted replies.
@@ -105,6 +105,73 @@ test('runs the agent loop: writes an allowed file, refuses others, then finishes
     assert.match(results[0], /Not allowed to write VOICE.md/);
     assert.match(results[1], /outside the repository/);
     assert.match(results[2], /Nothing has been written yet/);
+  } finally {
+    local.close();
+  }
+});
+
+const failedBuild = [
+  '> rookery@0.1.0 build',
+  '> astro check && astro build',
+  '',
+  '\u001b[1m▶ Astro collects anonymous usage data.\u001b[22m',
+  '  https://astro.build/telemetry',
+  '',
+  '21:17:02 [content] Syncing content',
+  '[InvalidContentEntryDataError] posts → test data does not match collection schema.',
+  '',
+  '  **description**: **description: Required',
+  '  **tags**: **tags: Expected type `"array"`, received `"string"`',
+  '',
+  '  Hint:',
+  '    See https://docs.astro.build/en/guides/content-collections/ for more information on content schemas.',
+  '  Location:',
+  '    /repo/src/content/posts/2026-10-29-test.md:0:0',
+  '  Stack trace:',
+  '    at getEntryData (/repo/node_modules/astro/dist/content/utils.js:83:22)',
+].join('\n');
+
+test('keeps the useful part of a failed build', () => {
+  assert.equal(
+    buildErrors(failedBuild),
+    [
+      '[InvalidContentEntryDataError] posts → test data does not match collection schema.',
+      '',
+      '  description: description: Required',
+      '  tags: tags: Expected type `"array"`, received `"string"`',
+      '',
+      '  Location:',
+      '    /repo/src/content/posts/2026-10-29-test.md:0:0',
+    ].join('\n'),
+  );
+});
+
+test('sends build errors back and gives up when the model keeps finishing without fixing them', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rook-'));
+  await writeFile(join(root, 'package.json'), JSON.stringify({ scripts: { build: "node -e \"console.error('[InvalidContentEntryDataError] description: Required'); process.exit(1)\"" } }));
+  const finish = { title: 'Post: x', description: 'd' };
+  const script = [
+    toolCall('a', 'write_file', { path: 'post.md', content: 'x' }),
+    toolCall('b', 'run_build', {}),
+    toolCall('c', 'finish', finish),
+    toolCall('d', 'run_build', {}),
+    toolCall('e', 'finish', finish),
+    toolCall('f', 'finish', finish),
+    toolCall('g', 'finish', finish),
+  ];
+  const local = await fakeServer((url, body, n) => [200, script[n - 1]]);
+  try {
+    const logs = [];
+    const models = new Models({ ...baseConfig, anthropicApiKey: '', localBaseUrl: `${local.url}/v1` }, () => {});
+    const { tools, state } = makeTools({ root, writable: [/^post\.md$/], build: true, buildHint: 'Front matter needs a description.', log: (m) => logs.push(m) });
+    await assert.rejects(runAgent({ models, system: 's', prompt: 'p', tools, state, maxTurns: 20, log: (m) => logs.push(m) }), StuckError);
+    assert.equal(local.requests.length, 6);
+    const results = local.requests.slice(1).map((r) => r.body.messages.at(-1).content);
+    assert.match(results[1], /Build FAILED[\s\S]*description: Required[\s\S]*Front matter needs a description/);
+    assert.match(results[2], /can't finish yet[\s\S]*description: Required/);
+    assert.match(results[3], /Nothing has changed since the last build failed/);
+    assert.ok(logs.some((l) => /build failed:\n.*description: Required/.test(l)));
+    assert.ok(logs.some((l) => /refused: The build is failing/.test(l)));
   } finally {
     local.close();
   }
