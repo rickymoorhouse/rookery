@@ -47,7 +47,10 @@ the model, handles git, the GitHub token and pull requests, and it re-runs the b
 the changed files itself before pushing.
 
 The runner works in its own clone (`~/.rookery-runner/repo` by default), so it never touches your
-working copy. Logs go to `~/.rookery-runner/logs/<date>.log`.
+working copy. Logs go to `~/.rookery-runner/logs/<date>.log`. If you set `ROOK_HOME`, keep it
+outside any other project, your own checkout of the blog included: the site build in the clone
+would pick up the outer `tsconfig.json` and fail with "Tsconfig not found astro/tsconfigs/strict".
+The runner refuses to start if it finds one.
 
 ## Setup
 

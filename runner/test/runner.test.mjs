@@ -9,6 +9,7 @@ import { promisify } from 'node:util';
 import { test } from 'node:test';
 import { buildErrors, htmlToText, makeTools, runAgent, StuckError } from '../lib/agent.mjs';
 import { fromOpenAI, Models, toOpenAI } from '../lib/models.mjs';
+import { enclosingProject } from '../lib/config.mjs';
 
 // A stand-in for an OpenAI-compatible server (Ollama) that plays back scripted replies.
 async function fakeServer(handler) {
@@ -175,6 +176,13 @@ test('sends build errors back and gives up when the model keeps finishing withou
   } finally {
     local.close();
   }
+});
+
+test('spots a runner home inside another project', async () => {
+  const outer = await mkdtemp(join(tmpdir(), 'rook-'));
+  await writeFile(join(outer, 'tsconfig.json'), '{}');
+  assert.equal(enclosingProject(join(outer, 'runner-home')), join(outer, 'tsconfig.json'));
+  assert.equal(enclosingProject(await mkdtemp(join(tmpdir(), 'rook-'))), null);
 });
 
 test('turns HTML into readable text with links kept', () => {
