@@ -89,10 +89,10 @@ Run the weekly run on Monday mornings, like the cloud task (07:58 UK time).
 
 ## Publishing on time
 
-Merged posts dated in the future go live at 06:00 UK time on their `pubDate`: the
-`publish-scheduled.yml` workflow waits for that moment in GitHub Actions and starts the deploy,
-so nothing needs to run on your machine. `publish.mjs` is an optional extra that starts the same
-deploy by hand from your machine:
+Merged posts dated in the future go live when the site is next rebuilt on or after their
+`pubDate`. The deploy workflow rebuilds daily on a GitHub schedule, but GitHub starts scheduled
+runs late, often by hours, and sometimes skips them. `publish.mjs` starts the same deploy by hand
+from your machine, so the post goes live and is announced on Bluesky when you choose:
 
 ```sh
 node publish.mjs              # start the deploy now

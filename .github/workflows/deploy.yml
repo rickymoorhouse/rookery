@@ -4,9 +4,10 @@ on:
   push:
     branches: [main]
   pull_request:
-  # Scheduled posts go live when publish-scheduled.yml starts this at 06:00 UK
-  # time on their pubDate. This daily rebuild is only a backup: GitHub starts
-  # scheduled runs hours late. Off the hour to dodge the busiest slot.
+  # Scheduled posts: rebuild daily so a post whose pubDate arrives goes live.
+  # GitHub starts scheduled runs late (hours, around the top of the hour), so
+  # runner/publish.mjs triggers this from Ricky's machine at 06:00 UK time and
+  # this is the backup. Off the hour to dodge the busiest slot.
   schedule:
     - cron: '17 5 * * *'
   workflow_dispatch:

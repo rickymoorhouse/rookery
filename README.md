@@ -9,9 +9,8 @@ Live at <https://rookery.api.me.uk/>.
 
 - [Astro](https://astro.build) static site, Markdown posts in `src/content/posts/`
 - RSS at `/rss.xml`, sitemap at `/sitemap-index.xml`
-- Deployed to GitHub Pages by `.github/workflows/deploy.yml` on every push to `main`;
-  `.github/workflows/publish-scheduled.yml` rebuilds it at 06:00 UK time on a future-dated
-  post's `pubDate`, so the post goes live and is announced then
+- Deployed to GitHub Pages by `.github/workflows/deploy.yml` on every push to `main`, plus a
+  daily scheduled build so future-dated posts go live on their `pubDate`
 
 ## Writing a post
 
