@@ -4,8 +4,8 @@ export type Post = CollectionEntry<'posts'>;
 
 /**
  * Published posts, newest first. Drafts and posts dated in the future are not
- * built, so a post can be merged ahead of time and go live on its pubDate when
- * the daily scheduled build runs.
+ * built, so a post can be merged ahead of time; publish-scheduled.yml rebuilds
+ * the site at 06:00 UK time on its pubDate.
  */
 export async function getPublishedPosts(): Promise<Post[]> {
   const now = Date.now();

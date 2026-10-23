@@ -1,0 +1,48 @@
+name: Publish scheduled posts
+
+# Puts a post merged ahead of its pubDate live at 06:00 UK time on that date.
+# GitHub's own cron starts hours late, so this waits in a job until the post is
+# due and then starts the deploy. A wait longer than a job may run is done in
+# steps: the job starts a fresh copy of itself (see scripts/next-publish.mjs).
+# Runs never cancel a wait in progress, which could drop a deploy that was
+# about to start; a newer run queues behind it and picks up any new post.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  # Restarts the wait if a run was lost. Usually it finds nothing and exits.
+  schedule:
+    - cron: '43 */6 * * *'
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: publish-scheduled
+  cancel-in-progress: false
+
+jobs:
+  wait:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - id: next
+        run: node scripts/next-publish.mjs
+      - name: Wait until the post is due
+        if: steps.next.outputs.then != 'none'
+        run: sleep ${{ steps.next.outputs.wait }}
+      - name: Deploy
+        if: steps.next.outputs.then == 'deploy'
+        run: gh workflow run deploy.yml --ref main
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Keep waiting
+        if: steps.next.outputs.then == 'reschedule'
+        run: gh workflow run publish-scheduled.yml --ref main
+        env:
+          GH_TOKEN: ${{ github.token }}
