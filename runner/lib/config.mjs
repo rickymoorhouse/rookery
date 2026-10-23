@@ -19,6 +19,21 @@ export function loadEnvFile(file) {
   }
 }
 
+// The runner's clone must not sit inside another TypeScript project
+// (such as your own checkout of the blog): the site build picks up the outer
+// tsconfig.json, can't resolve astro/tsconfigs/strict from there, and fails.
+// Returns the enclosing project's config file, or null.
+export function enclosingProject(home) {
+  for (let dir = resolve(home); ; ) {
+    for (const file of ['tsconfig.json', 'jsconfig.json']) {
+      if (existsSync(join(dir, file))) return join(dir, file);
+    }
+    const parent = dirname(dir);
+    if (parent === dir) return null;
+    dir = parent;
+  }
+}
+
 export function loadConfig() {
   loadEnvFile(process.env.ROOK_ENV_FILE || join(here, '..', '.env'));
   const env = process.env;

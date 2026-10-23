@@ -19,7 +19,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import Anthropic from '@anthropic-ai/sdk';
 import { makeTools, runAgent } from './lib/agent.mjs';
-import { loadConfig } from './lib/config.mjs';
+import { enclosingProject, loadConfig } from './lib/config.mjs';
 import { git as makeGit } from './lib/git.mjs';
 import { github } from './lib/github.mjs';
 import { Models } from './lib/models.mjs';
@@ -58,12 +58,19 @@ function log(message) {
 
 // ---------- checks ----------
 
+function homeProblem() {
+  const outer = enclosingProject(config.home);
+  return outer && `ROOK_HOME (${config.home}) is inside another project (${outer}), so the site build in its clone picks up the wrong tsconfig and fails. Set ROOK_HOME to a folder outside any project, such as ~/.rookery-runner.`;
+}
+
 async function check() {
   let ok = true;
   const say = (good, message) => {
     console.log(`${good ? 'ok  ' : 'FAIL'} ${message}`);
     ok &&= good;
   };
+  const problem = homeProblem();
+  say(!problem, problem || `Clone and logs in ${config.home}`);
   say(Number(process.versions.node.split('.')[0]) >= 20, `Node ${process.versions.node} (needs 20+)`);
   if (!config.githubToken) say(false, 'ROOK_GITHUB_TOKEN is not set');
   else {
@@ -97,7 +104,6 @@ async function check() {
       say(false, `Local model: can't reach ${config.localBaseUrl} (${e.message})`);
     }
   }
-  console.log(`Clone and logs: ${config.home}`);
   return ok;
 }
 
@@ -310,6 +316,8 @@ async function doPost({ g, gh, me, models, context, comments, stats }) {
 async function main() {
   if (args.check) process.exit((await check()) ? 0 : 1);
   if (!config.githubToken) throw new Error('ROOK_GITHUB_TOKEN is not set. See runner/README.md.');
+  const problem = homeProblem();
+  if (problem) throw new Error(problem);
   const only = args.only;
   if (only && !['post', 'replies'].includes(only)) throw new Error('--only takes post or replies');
 
