@@ -9,6 +9,13 @@ import { run } from './proc.mjs';
 
 const MAX_READ = 100_000;
 const MAX_FETCH = 15_000;
+const MAX_BUILD_OUTPUT = 6000;
+// How many times in a row the model may call finish while it can't finish, or
+// rebuild without changing anything, before the runner gives up on the task.
+const MAX_STUCK = 4;
+
+// The model stopped making progress; the runner ends the task with this message.
+export class StuckError extends Error {}
 
 // The Anthropic API's own web tools. The local model uses fetch_url instead.
 export const SERVER_TOOLS = [
@@ -49,11 +56,43 @@ export function htmlToText(html) {
     .trim();
 }
 
+// The useful part of a failed `npm run build`: colours and Astro's telemetry
+// notice removed, starting at the first error and stopping before stack traces.
+export function buildErrors(output) {
+  const lines = output
+    .replace(/\x1b\[[0-9;]*[A-Za-z]/g, '')
+    .replace(/\*\*/g, '')
+    .split('\n')
+    .map((l) => l.trimEnd());
+  const start = lines.findIndex((l) => /\berror\b|Error\]|^error/i.test(l));
+  const kept = [];
+  for (const line of start === -1 ? lines : lines.slice(start)) {
+    if (/^\s*(Stack trace:|at\s)/.test(line)) break;
+    if (/^\s*(Hint:|Error reference:|See https:|https:\/\/docs\.astro\.build)/.test(line)) continue;
+    kept.push(line);
+  }
+  const text = kept.join('\n').replace(/\n{3,}/g, '\n\n').trim() || output.trim();
+  return text.length > MAX_BUILD_OUTPUT ? `...\n${text.slice(-MAX_BUILD_OUTPUT)}` : text;
+}
+
 // writable: regexes for repo-relative paths Rook may write.
 // build: whether the task must leave a passing `npm run build` behind.
+// buildHint: extra advice sent back with a failed build, e.g. what the front matter must look like.
 // validate: called on finish; returns an error message to send back, or null.
-export function makeTools({ root, writable, build = false, validate = async () => null, log }) {
-  const state = { written: new Set(), buildOk: !build, finished: null };
+export function makeTools({ root, writable, build = false, buildHint = '', validate = async () => null, log }) {
+  // stuck counts finish calls that were refused and rebuilds with nothing changed,
+  // since the last write. A weak model can otherwise loop on finish forever.
+  const state = { written: new Set(), buildOk: !build, buildError: null, changedSinceBuild: true, stuck: 0, finished: null };
+
+  function refuse(message) {
+    state.stuck += 1;
+    if (state.stuck >= MAX_STUCK) {
+      throw new StuckError(`Gave up after ${state.stuck} attempts in a row without fixing anything. Last problem: ${message}`);
+    }
+    throw new Error(message);
+  }
+  const fixIt = () =>
+    `The build is failing, so you can't finish yet. Fix the problem below by writing the corrected file in full with write_file, then call run_build again.\n\n${state.buildError}${buildHint ? `\n\n${buildHint}` : ''}`;
 
   const tools = [
     {
@@ -110,6 +149,8 @@ export function makeTools({ root, writable, build = false, validate = async () =
         await mkdir(dirname(full), { recursive: true });
         await writeFile(full, input.content.endsWith('\n') ? input.content : `${input.content}\n`);
         state.written.add(rel);
+        state.changedSinceBuild = true;
+        state.stuck = 0;
         if (build) state.buildOk = false;
         log(`  wrote ${rel}`);
         return `Wrote ${rel} (${input.content.length} characters).`;
@@ -156,10 +197,10 @@ export function makeTools({ root, writable, build = false, validate = async () =
       async run(input) {
         requireString(input, 'title', 'description');
         if (!input.skip) {
-          if (!state.written.size) throw new Error('Nothing has been written yet. Write the files first, or finish with skip: true.');
-          if (!state.buildOk) throw new Error('Run run_build after your last change and fix any errors before finishing.');
+          if (!state.written.size) refuse('Nothing has been written yet. Write the files first, or finish with skip: true.');
+          if (!state.buildOk) refuse(state.buildError && !state.changedSinceBuild ? fixIt() : 'Call run_build after your last change and fix any errors before finishing.');
           const problem = await validate(state);
-          if (problem) throw new Error(problem);
+          if (problem) refuse(`${problem} Fix it with write_file, then${build ? ' call run_build and' : ''} finish again.`);
         }
         state.finished = { title: input.title.trim(), description: input.description.trim(), skip: Boolean(input.skip) };
         return 'Done. The runner takes it from here.';
@@ -173,11 +214,18 @@ export function makeTools({ root, writable, build = false, validate = async () =
       description: 'Run `npm run build` (astro check, then the site build). It must pass before you finish.',
       input_schema: { type: 'object', properties: {}, additionalProperties: false },
       async run() {
+        if (!state.buildOk && !state.changedSinceBuild) refuse(`Nothing has changed since the last build failed. ${fixIt()}`);
         const result = await run('npm', ['run', 'build'], { cwd: root, allowFail: true });
         state.buildOk = result.code === 0;
-        log(`  build ${state.buildOk ? 'passed' : 'failed'}`);
-        const output = result.output.length > 6000 ? `...\n${result.output.slice(-6000)}` : result.output;
-        return `${state.buildOk ? 'Build passed.' : 'Build FAILED.'}\n\n${output}`;
+        state.changedSinceBuild = false;
+        if (state.buildOk) {
+          state.buildError = null;
+          log('  build passed');
+          return 'Build passed. If you have nothing else to change, call finish.';
+        }
+        state.buildError = buildErrors(result.output);
+        log(`  build failed:\n${state.buildError.split('\n').slice(0, 15).map((l) => `    ${l}`).join('\n')}`);
+        return `Build FAILED.\n\n${fixIt()}`;
       },
     });
   }
@@ -219,6 +267,9 @@ export async function runAgent({ models, system, prompt, tools, state, maxTurns,
         const output = await tool.run(call.input ?? {});
         results.push({ type: 'tool_result', tool_use_id: call.id, content: String(output) });
       } catch (error) {
+        if (error instanceof StuckError) throw error;
+        // run_build logs its own failures; for the rest, show why the call was refused.
+        if (call.name !== 'run_build') log(`    refused: ${error.message.split('\n')[0].slice(0, 200)}`);
         results.push({ type: 'tool_result', tool_use_id: call.id, content: `Error: ${error.message}`, is_error: true });
       }
     }

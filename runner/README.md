@@ -39,7 +39,10 @@ app's settings). Local models are slower and weaker writers; expect drafts that 
 The model works through a handful of tools: list and read files in the checkout, write files,
 fetch web pages, and run the site build. It can only write the files its task allows
 (`replies/<issue>-<slug>.md` for replies; this Thursday's post and `IDEAS.md` for the post), and
-`finish` refuses until the build passes and the post's front matter checks out. The runner, not
+`finish` refuses until the build passes and the post's front matter checks out. A failed build
+sends the model the build's errors (and logs them); if the model keeps calling `finish` or
+rebuilding without changing anything, the runner gives up on that task after four tries rather
+than looping until it runs out of turns. The runner, not
 the model, handles git, the GitHub token and pull requests, and it re-runs the build and checks
 the changed files itself before pushing.
 

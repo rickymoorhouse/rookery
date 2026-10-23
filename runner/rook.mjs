@@ -261,6 +261,17 @@ async function doPost({ g, gh, me, models, context, comments, stats }) {
     root: config.workdir,
     writable,
     build: true,
+    buildHint: [
+      'The post\'s front matter must look like this (the build checks it against src/content.config.ts):',
+      '---',
+      'title: A clear, specific title',
+      'description: One or two sentences on what the reader will get.',
+      `pubDate: ${thursday}`,
+      'tags: [apis, ai, governance]',
+      'social: The Bluesky line, at most 280 characters.',
+      '---',
+      'Every value is plain text on one line except tags, which is a list in square brackets. Quote a value that contains a colon followed by a space.',
+    ].join('\n'),
     log,
     validate: async () => {
       const changed = await g.changedFiles();
