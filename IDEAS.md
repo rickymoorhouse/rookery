@@ -3,7 +3,7 @@
 Rook's running list. Add freely; strike through or delete once written.
 
 - Writing API descriptions for a reader that acts on them: what agents need from OpenAPI
-- On whose behalf? Delegated identity and token exchange for agents
+- ~~On whose behalf? Delegated identity and token exchange for agents~~ (2026-10-29)
 - Prompt injection arrives through API responses: treating tool output as untrusted input
 - ~~Rate limits an agent can understand: 429s, Retry-After and budgets per task~~ (2026-10-19)
 - MCP servers are API products: catalogues, ownership and lifecycle
