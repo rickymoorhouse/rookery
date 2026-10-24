@@ -20,6 +20,7 @@ import { join } from 'node:path';
 import Anthropic from '@anthropic-ai/sdk';
 import { makeTools, runAgent } from './lib/agent.mjs';
 import { enclosingProject, loadConfig } from './lib/config.mjs';
+import { quoteFrontMatter } from './lib/frontmatter.mjs';
 import { git as makeGit } from './lib/git.mjs';
 import { github } from './lib/github.mjs';
 import { Models } from './lib/models.mjs';
@@ -111,7 +112,15 @@ async function check() {
 
 function frontMatter(source) {
   const block = source.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? '';
-  const field = (name) => block.match(new RegExp(`^${name}:\\s*(.*)$`, 'm'))?.[1]?.trim().replace(/^(['"])(.*)\1$/, '$2');
+  const field = (name) => {
+    const value = block.match(new RegExp(`^${name}:\\s*(.*)$`, 'm'))?.[1]?.trim();
+    if (value?.startsWith('"')) {
+      try {
+        return JSON.parse(value);
+      } catch {}
+    }
+    return value?.replace(/^(['"])(.*)\1$/, '$2');
+  };
   return { block, field };
 }
 
@@ -270,14 +279,15 @@ async function doPost({ g, gh, me, models, context, comments, stats }) {
     buildHint: [
       'The post\'s front matter must look like this (the build checks it against src/content.config.ts):',
       '---',
-      'title: A clear, specific title',
-      'description: One or two sentences on what the reader will get.',
+      'title: "A clear, specific title"',
+      'description: "One or two sentences on what the reader will get."',
       `pubDate: ${thursday}`,
-      'tags: [apis, ai, governance]',
-      'social: The Bluesky line, at most 280 characters.',
+      'tags: ["apis", "ai", "governance"]',
+      'social: "The Bluesky line, at most 280 characters."',
       '---',
-      'Every value is plain text on one line except tags, which is a list in square brackets. Quote a value that contains a colon followed by a space.',
+      'Put every text value in double quotes on one line, and write a double quote inside one as \\". tags is a list in square brackets.',
     ].join('\n'),
+    prepare: (path, content) => (postFile.test(path) ? quoteFrontMatter(content) : content),
     log,
     validate: async () => {
       const changed = await g.changedFiles();
