@@ -10,6 +10,7 @@ import { test } from 'node:test';
 import { buildErrors, htmlToText, makeTools, runAgent, StuckError } from '../lib/agent.mjs';
 import { fromOpenAI, Models, toOpenAI } from '../lib/models.mjs';
 import { enclosingProject } from '../lib/config.mjs';
+import { quoteFrontMatter } from '../lib/frontmatter.mjs';
 
 // A stand-in for an OpenAI-compatible server (Ollama) that plays back scripted replies.
 async function fakeServer(handler) {
@@ -183,6 +184,46 @@ test('spots a runner home inside another project', async () => {
   await writeFile(join(outer, 'tsconfig.json'), '{}');
   assert.equal(enclosingProject(join(outer, 'runner-home')), join(outer, 'tsconfig.json'));
   assert.equal(enclosingProject(await mkdtemp(join(tmpdir(), 'rook-'))), null);
+});
+
+test('quotes the post front matter that small models get wrong', () => {
+  const post = [
+    '---',
+    'title: Prompt injection: the API output problem',
+    'description: "Agents" trust what APIs say',
+    "social: 'Already quoted, it''s fine'",
+    'tags: apis, ai',
+    'pubDate: 2026-10-29',
+    '---',
+    '',
+    'Body: left alone.',
+    '',
+  ].join('\n');
+  assert.equal(
+    quoteFrontMatter(post),
+    [
+      '---',
+      'title: "Prompt injection: the API output problem"',
+      'description: "\\"Agents\\" trust what APIs say"',
+      "social: 'Already quoted, it''s fine'",
+      'tags: ["apis", "ai"]',
+      'pubDate: 2026-10-29',
+      '---',
+      '',
+      'Body: left alone.',
+      '',
+    ].join('\n'),
+  );
+  const tidy = '---\ntitle: "Fine"\ntags: ["a"]\n---\nx';
+  assert.equal(quoteFrontMatter(tidy), tidy);
+  assert.equal(quoteFrontMatter('no front matter'), 'no front matter');
+});
+
+test('write_file runs prepare before writing', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rook-'));
+  const { tools } = makeTools({ root, writable: [/^post\.md$/], prepare: (path, content) => content.toUpperCase(), log: () => {} });
+  await tools.find((t) => t.name === 'write_file').run({ path: 'post.md', content: 'hi' });
+  assert.equal(await readFile(join(root, 'post.md'), 'utf8'), 'HI\n');
 });
 
 test('turns HTML into readable text with links kept', () => {

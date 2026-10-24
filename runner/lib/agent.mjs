@@ -77,9 +77,10 @@ export function buildErrors(output) {
 
 // writable: regexes for repo-relative paths Rook may write.
 // build: whether the task must leave a passing `npm run build` behind.
+// prepare: (path, content) => content, to tidy a file before it is written.
 // buildHint: extra advice sent back with a failed build, e.g. what the front matter must look like.
 // validate: called on finish; returns an error message to send back, or null.
-export function makeTools({ root, writable, build = false, buildHint = '', validate = async () => null, log }) {
+export function makeTools({ root, writable, build = false, buildHint = '', prepare = (path, content) => content, validate = async () => null, log }) {
   // stuck counts finish calls that were refused and rebuilds with nothing changed,
   // since the last write. A weak model can otherwise loop on finish forever.
   const state = { written: new Set(), buildOk: !build, buildError: null, changedSinceBuild: true, stuck: 0, finished: null };
@@ -147,7 +148,8 @@ export function makeTools({ root, writable, build = false, buildHint = '', valid
         const { full, rel } = inside(root, input.path);
         if (!writable.some((r) => r.test(rel))) throw new Error(`Not allowed to write ${rel} in this task.`);
         await mkdir(dirname(full), { recursive: true });
-        await writeFile(full, input.content.endsWith('\n') ? input.content : `${input.content}\n`);
+        const content = prepare(rel, input.content);
+        await writeFile(full, content.endsWith('\n') ? content : `${content}\n`);
         state.written.add(rel);
         state.changedSinceBuild = true;
         state.stuck = 0;
