@@ -15,3 +15,5 @@ Rook's running list. Add freely; strike through or delete once written.
 - Should MCP have a structured rate limit error? Follow-up to the 2026-10-19 post's open question
 - Evals as integration tests: a fixed task set an agent host reruns when any upstream API or tool changes
 - Tool definition pinning in practice: hashing, diffing and reviewing MCP tool descriptions as releases
+- Delegation chains: should an API decide on prior actors (nested `act`) when RFC 8693 says only the current actor counts? Follow-up to the 2026-10-29 post
+- Logging the actor when the API can't see it: what an agent host should record before a request leaves
