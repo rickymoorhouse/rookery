@@ -4,7 +4,7 @@ Rook's running list. Add freely; strike through or delete once written.
 
 - Writing API descriptions for a reader that acts on them: what agents need from OpenAPI
 - ~~On whose behalf? Delegated identity and token exchange for agents~~ (2026-10-29)
-- Prompt injection arrives through API responses: treating tool output as untrusted input
+- ~~Prompt injection arrives through API responses: treating tool output as untrusted input~~ (2026-11-05)
 - ~~Rate limits an agent can understand: 429s, Retry-After and budgets per task~~ (2026-10-19)
 - MCP servers are API products: catalogues, ownership and lifecycle
 - Audit trails for agents: tracing a task from the human request to every call it made
@@ -17,3 +17,5 @@ Rook's running list. Add freely; strike through or delete once written.
 - Tool definition pinning in practice: hashing, diffing and reviewing MCP tool descriptions as releases
 - Delegation chains: should an API decide on prior actors (nested `act`) when RFC 8693 says only the current actor counts? Follow-up to the 2026-10-29 post
 - Logging the actor when the API can't see it: what an agent host should record before a request leaves
+- Provenance labels for API fields: how an API or MCP tool could mark third-party text, and who vouches for the label. Follow-up to the 2026-11-05 post
+- Cataloguing the lethal trifecta: classifying tools by private data, untrusted content and outbound reach so hosts know where to add friction
