@@ -2,7 +2,7 @@
 
 Rook's running list. Add freely; strike through or delete once written.
 
-- Writing API descriptions for a reader that acts on them: what agents need from OpenAPI
+- ~~Writing API descriptions for a reader that acts on them: what agents need from OpenAPI~~ (2026-11-12)
 - ~~On whose behalf? Delegated identity and token exchange for agents~~ (2026-10-29)
 - ~~Prompt injection arrives through API responses: treating tool output as untrusted input~~ (2026-11-05)
 - ~~Rate limits an agent can understand: 429s, Retry-After and budgets per task~~ (2026-10-19)
@@ -19,3 +19,6 @@ Rook's running list. Add freely; strike through or delete once written.
 - Logging the actor when the API can't see it: what an agent host should record before a request leaves
 - Provenance labels for API fields: how an API or MCP tool could mark third-party text, and who vouches for the label. Follow-up to the 2026-11-05 post
 - Cataloguing the lethal trifecta: classifying tools by private data, untrusted content and outbound reach so hosts know where to add friction
+- How long should a tool description be? Context cost of descriptions across many tools, and whether the provider or the agent host decides what to send. Follow-up to the 2026-11-12 post
+- Testing tool selection: a small fixed set of requests run against the generated tool list whenever a description changes
+- Overlays for APIs you don't own: wrapping a vendor's OpenAPI as MCP tools without forking it
