@@ -48,32 +48,67 @@ async function goatcounter() {
     Authorization: `Bearer ${GOATCOUNTER_API_TOKEN}`,
     'Content-Type': 'application/json',
   };
-  const range = (start) => `start=${start.toISOString()}&end=${now.toISOString()}`;
+  // GoatCounter's API documents start and end as "rounded to the hour"; the
+  // reports that sent millisecond times got `404 {"error":"not found"}`.
+  // Round the start down and the end up, so the range still covers now.
+  const HOUR = 60 * 60 * 1000;
+  const floorHour = (d) => new Date(Math.floor(d.getTime() / HOUR) * HOUR);
+  const ceilHour = (d) => new Date(Math.ceil(d.getTime() / HOUR) * HOUR);
+  const hourISO = (d) => d.toISOString().replace('.000Z', 'Z');
+  const end = hourISO(ceilHour(now));
+  const range = (start) => `start=${hourISO(floorHour(start))}&end=${end}`;
   const hits = async (start) => {
     const data = await getJSON(`${api}/stats/hits?${range(start)}&limit=100`, headers);
     return new Map(data.hits.map((h) => [h.path, h.count ?? h.count_unique ?? 0]));
   };
-  const [week, all, total, refs] = await Promise.all([
-    hits(weekAgo),
-    hits(launch),
-    getJSON(`${api}/stats/total?${range(weekAgo)}`, headers),
-    getJSON(`${api}/stats/toprefs?${range(weekAgo)}&limit=10`, headers),
-  ]);
+  // Each request stands alone: one failure is reported and the rest kept.
+  const requests = {
+    'page views, last 7 days': hits(weekAgo),
+    'page views, all time': hits(launch),
+    'visitor total': getJSON(`${api}/stats/total?${range(weekAgo)}`, headers),
+    'top referrers': getJSON(`${api}/stats/toprefs?${range(weekAgo)}&limit=10`, headers),
+  };
+  const names = Object.keys(requests);
+  const settled = await Promise.allSettled(Object.values(requests));
+  const failed = [];
+  const [week, all, total, refs] = settled.map((r, i) => {
+    if (r.status === 'fulfilled') return r.value;
+    console.error(`GoatCounter ${names[i]}:`, r.reason);
+    failed.push(`- ${names[i]}: ${String(r.reason?.message ?? r.reason).split('\n')[0]}`);
+    return undefined;
+  });
+  if (failed.length === names.length) {
+    throw new Error(`every GoatCounter request failed, first: ${failed[0].slice(2)}`);
+  }
 
-  const paths = [...all.keys()].sort((a, b) => (week.get(b) ?? 0) - (week.get(a) ?? 0) || all.get(b) - all.get(a));
-  const lines = [
-    `Visitors in the last 7 days: **${total.total ?? total.total_utc ?? 0}**.`,
+  const lines = [];
+  lines.push(
+    total
+      ? `Visitors in the last 7 days: **${total.total ?? total.total_utc ?? 0}**.`
+      : 'Visitors in the last 7 days: unknown (request failed, see below).',
     '',
-    '| Page | Last 7 days | All time |',
-    '| --- | ---: | ---: |',
-    ...paths.slice(0, 20).map((p) => `| ${p} | ${week.get(p) ?? 0} | ${all.get(p)} |`),
-    '',
-    'Top referrers, last 7 days:',
-    '',
-  ];
-  const refList = (refs.stats ?? []).map((r) => `- ${r.name || '(direct or unknown)'}: ${r.count ?? r.count_unique}`);
-  lines.push(...(refList.length ? refList : ['- None yet.']));
-  return lines.join('\n');
+  );
+  if (all || week) {
+    const weekMap = week ?? new Map();
+    const allMap = all ?? new Map();
+    const keys = new Set([...allMap.keys(), ...weekMap.keys()]);
+    const cell = (m, p) => (m ? (m.get(p) ?? 0) : '?');
+    const paths = [...keys].sort(
+      (a, b) => (weekMap.get(b) ?? 0) - (weekMap.get(a) ?? 0) || (allMap.get(b) ?? 0) - (allMap.get(a) ?? 0),
+    );
+    lines.push(
+      '| Page | Last 7 days | All time |',
+      '| --- | ---: | ---: |',
+      ...paths.slice(0, 20).map((p) => `| ${p} | ${cell(week, p)} | ${cell(all, p)} |`),
+      '',
+    );
+  }
+  if (refs) {
+    const refList = (refs.stats ?? []).map((r) => `- ${r.name || '(direct or unknown)'}: ${r.count ?? r.count_unique}`);
+    lines.push('Top referrers, last 7 days:', '', ...(refList.length ? refList : ['- None yet.']), '');
+  }
+  if (failed.length) lines.push("Couldn't fetch:", '', ...failed);
+  return lines.join('\n').trimEnd();
 }
 
 async function comments() {
