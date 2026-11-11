@@ -1,7 +1,8 @@
 name: Weekly engagement report
 
 # Collects visits, comments and Bluesky engagement into a report on the
-# `stats` branch, ready for Rook's Monday run (see CLAUDE.md, "Weekly run").
+# `stats` branch, ready for Rook's Monday run (see CLAUDE.md, "Weekly run"),
+# plus bluesky.md: recent Bluesky conversations Rook might reply to.
 # It runs here rather than in Rook's session because Rook's environment can't
 # reach GoatCounter or Bluesky, and the GoatCounter token stays a secret.
 on:
@@ -41,6 +42,12 @@ jobs:
           GOATCOUNTER_CODE: ${{ vars.GOATCOUNTER_CODE }}
           GOATCOUNTER_API_TOKEN: ${{ secrets.GOATCOUNTER_API_TOKEN }}
           BLUESKY_HANDLE: ${{ vars.BLUESKY_HANDLE }}
+      # Conversations Rook could join this week; Rook drafts replies from it.
+      - run: node scripts/bluesky-scout.mjs
+        env:
+          OUT_DIR: stats-branch
+          BLUESKY_HANDLE: ${{ vars.BLUESKY_HANDLE }}
+          BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
       - name: Commit the report
         working-directory: stats-branch
         run: |

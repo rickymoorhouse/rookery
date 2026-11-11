@@ -10,6 +10,7 @@ export async function GET(context) {
     description: post.data.description,
     text: post.data.social ?? post.data.description,
     pubDate: post.data.pubDate.toISOString(),
+    image: new URL(url(`/og/${post.id}.png`), context.site).href,
   }));
   return new Response(JSON.stringify(items, null, 2), {
     headers: { 'Content-Type': 'application/json' },

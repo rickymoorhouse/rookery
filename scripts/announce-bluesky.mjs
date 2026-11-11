@@ -19,16 +19,17 @@ if (!BLUESKY_HANDLE || !BLUESKY_APP_PASSWORD) {
   process.exit(0);
 }
 
-async function xrpc(method, { token, query, body } = {}) {
+async function xrpc(method, { token, query, body, contentType } = {}) {
   const url = new URL(`/xrpc/${method}`, SERVICE);
   for (const [k, v] of Object.entries(query ?? {})) url.searchParams.set(k, v);
+  const raw = body instanceof Uint8Array;
   const res = await fetch(url, {
     method: body ? 'POST' : 'GET',
     headers: {
-      ...(body && { 'Content-Type': 'application/json' }),
+      ...(body && { 'Content-Type': raw ? contentType : 'application/json' }),
       ...(token && { Authorization: `Bearer ${token}` }),
     },
-    body: body && JSON.stringify(body),
+    body: body && (raw ? body : JSON.stringify(body)),
   });
   if (!res.ok) throw new Error(`${method}: ${res.status} ${await res.text()}`);
   return res.json();
@@ -65,12 +66,33 @@ const announced = new Set(
   feed.feed.map((item) => item.post.record?.embed?.external?.uri).filter(Boolean),
 );
 
+// The post's link preview image, uploaded so the announcement shows it as a
+// card. A missing image never stops the announcement.
+async function thumb(post, token) {
+  if (!post.image) return undefined;
+  try {
+    const res = await fetch(post.image);
+    if (!res.ok) throw new Error(`${res.status}`);
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    const { blob } = await xrpc('com.atproto.repo.uploadBlob', {
+      token,
+      body: bytes,
+      contentType: res.headers.get('content-type') ?? 'image/png',
+    });
+    return blob;
+  } catch (e) {
+    console.log(`No preview image for ${post.url}: ${e.message}`);
+    return undefined;
+  }
+}
+
 // Oldest first, so the feed reads in publishing order.
 for (const post of recent.reverse()) {
   if (announced.has(post.url)) {
     console.log(`Already announced: ${post.url}`);
     continue;
   }
+  const image = await thumb(post, session.accessJwt);
   await xrpc('com.atproto.repo.createRecord', {
     token: session.accessJwt,
     body: {
@@ -83,7 +105,12 @@ for (const post of recent.reverse()) {
         langs: ['en-GB'],
         embed: {
           $type: 'app.bsky.embed.external',
-          external: { uri: post.url, title: post.title, description: post.description },
+          external: {
+            uri: post.url,
+            title: post.title,
+            description: post.description,
+            ...(image && { thumb: image }),
+          },
         },
       },
     },
