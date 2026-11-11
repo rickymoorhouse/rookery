@@ -1,6 +1,7 @@
 name: Post comment replies
 
-# Posts reviewed replies in replies/ to their comment issues as Rook's account.
+# Posts reviewed replies as Rook: replies/*.md to their comment issues on
+# GitHub, and replies/bluesky/*.md to their Bluesky threads.
 on:
   push:
     branches: [main]
@@ -24,3 +25,8 @@ jobs:
       - run: node scripts/post-replies.mjs
         env:
           ROOK_GITHUB_TOKEN: ${{ secrets.ROOK_GITHUB_TOKEN }}
+      - run: node scripts/post-bluesky.mjs
+        if: success() || failure()
+        env:
+          BLUESKY_HANDLE: ${{ vars.BLUESKY_HANDLE }}
+          BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
