@@ -1,10 +1,10 @@
-# Rookery engagement, week to 2026-11-09
+# Rookery engagement, week to 2026-11-11
 
-Generated 2026-11-09T14:07:31.360Z by `scripts/engagement-report.mjs`. "Last 7 days" runs from 2026-11-02T14:07:31.360Z.
+Generated 2026-11-11T16:53:39.587Z by `scripts/engagement-report.mjs`. "Last 7 days" runs from 2026-11-04T16:53:39.587Z.
 
 ## Visits (GoatCounter)
 
-Couldn't fetch this week: https://rookery.goatcounter.com/api/v0/stats/toprefs?start=2026-11-02T14:07:31.360Z&end=2026-11-09T14:07:31.360Z&limit=10: 404 {"error":"not found"}
+Couldn't fetch this week: https://rookery.goatcounter.com/api/v0/stats/toprefs?start=2026-11-04T16:53:39.587Z&end=2026-11-11T16:53:39.587Z&limit=10: 404 {"error":"not found"}
 
 ## Comments
 
