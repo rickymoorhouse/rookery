@@ -36,8 +36,8 @@ on defining tools calls detailed descriptions
 ["by far the most important factor in tool performance"](https://platform.claude.com/docs/en/agents-and-tools/tool-use/implement-tool-use),
 and asks for at least three or four sentences covering what the tool does, when it should and
 shouldn't be used, what each parameter means, and its caveats. FastMCP's own documentation
-says that models do significantly better with curated servers than with converted ones, and
-recommends conversion for bootstrapping and prototyping.
+says that models do significantly better with curated servers than with auto-converted ones,
+and recommends conversion for bootstrapping and prototyping, not for mirroring an API to models.
 
 ## What the guides used to carry
 
@@ -127,7 +127,8 @@ as a workflow, and let the tool layer build from it.
 
 - **Lint for presence, review for content.** An OpenAPI linter can require a description on
   every operation and parameter, and flag one that only repeats the summary. It can't tell
-  whether the description says when *not* to call the operation. That needs a reviewer.
+  whether the description says when *not* to call the operation. That needs a reviewer. There
+  is a sample ruleset below.
 - **Test descriptions the way an agent reads them.** My suggestion, not an established
   practice: give a model only the generated tool list and a dozen realistic requests, and check
   which operation it picks for each. Run it again whenever a description changes. It is cheap,
@@ -139,6 +140,64 @@ as a workflow, and let the tool layer build from it.
   I've written before about [errors an agent can act on](../rate-limits-agents-can-read/).
 - **Treat a description change as a contract change.** Review it, note it in the changelog,
   and tell the teams who run agents against the API.
+
+## A sample lint rule
+
+Here is a ruleset for [OpenLint](https://openlint.org/), the community fork of Spectral. It
+uses OpenLint's built-in OpenAPI rules, which already
+[warn on an operation with no description](https://docs.openlint.org/reference/openapi-rules/),
+and adds two rules of its own:
+
+```yaml
+# .openlint.yaml
+extends: openlint:openapi
+functions: [describesMoreThanSummary]
+rules:
+  parameter-description:
+    description: Every parameter needs a description.
+    message: Parameter has no description.
+    severity: error
+    given:
+      - $.paths[*].parameters[*]
+      - $.paths[*][get,put,post,delete,options,head,patch,trace].parameters[*]
+    then:
+      field: description
+      function: truthy
+  operation-description-adds-to-summary:
+    description: An operation's description must say more than its summary.
+    message: "{{error}}"
+    severity: error
+    given: $.paths[*][get,put,post,delete,options,head,patch,trace]
+    then:
+      function: describesMoreThanSummary
+```
+
+None of OpenLint's [core functions](https://docs.openlint.org/reference/functions/) compares
+one field with another, so the second rule needs a
+[custom function](https://docs.openlint.org/guides/custom-functions). This one counts the
+words in the description that aren't already in the summary:
+
+```js
+// functions/describesMoreThanSummary.js
+const words = (s) => (s ?? '').toLowerCase().match(/[a-z0-9]+/g) ?? [];
+
+export default (operation) => {
+  const summary = new Set(words(operation.summary));
+  const extra = words(operation.description).filter((w) => !summary.has(w));
+  if (extra.length < 10) {
+    return [{
+      message: 'The description only restates the summary. Say when to use this ' +
+        'operation, when not to, and what it changes.',
+    }];
+  }
+};
+```
+
+I ran it with OpenLint 1.1.3 (`openlint lint openapi.yaml --ruleset .openlint.yaml`) against
+both versions of `cancelOrder` above. The thin one fails the second rule and the rewritten one
+passes it. Declare the `orderId` path parameter without a description and the first rule fails
+too. The threshold of ten new words is arbitrary, and a description can
+clear it while still saying nothing useful, which is why the reviewer stays.
 
 The question I haven't settled is length. Three or four sentences per operation is a floor,
 but an agent given eighty tools pays for every word of every description in its context
