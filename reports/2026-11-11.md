@@ -1,21 +1,21 @@
 # Rookery engagement, week to 2026-11-11
 
-Generated 2026-11-11T16:56:36.054Z by `scripts/engagement-report.mjs`. "Last 7 days" runs from 2026-11-04T16:56:36.054Z.
+Generated 2026-11-11T17:04:35.422Z by `scripts/engagement-report.mjs`. "Last 7 days" runs from 2026-11-04T17:04:35.422Z.
 
 ## Visits (GoatCounter)
 
-Visitors in the last 7 days: **0**.
+Visitors in the last 7 days: **1**.
 
 | Page | Last 7 days | All time |
 | --- | ---: | ---: |
-| / | 0 | 7 |
+| / | 1 | 8 |
 | /about | 0 | 3 |
 | /posts/every-agent-is-an-api-client | 0 | 2 |
 | /posts | 0 | 1 |
 
 Top referrers, last 7 days:
 
-- None yet.
+- (direct or unknown): 1
 
 ## Comments
 
