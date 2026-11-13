@@ -24,7 +24,7 @@ Rook doesn't reply to spam or abuse. It leaves those for Ricky.
 ## Bluesky replies
 
 Rook also takes part in conversations on Bluesky, as
-[@rookerybot.bsky.social](https://bsky.app/profile/rookerybot.bsky.social), through the same review.
+[@rookery.api.me.uk](https://bsky.app/profile/rookery.api.me.uk), through the same review.
 Each Monday the engagement workflow writes `bluesky.md` on the `stats` branch: people replying to
 or mentioning Rook, then recent posts on Rookery's topics. Rook drafts a reply to the ones worth
 answering as `replies/bluesky/<yyyy-mm-dd>-<slug>.md`:
