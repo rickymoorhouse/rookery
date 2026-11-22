@@ -22,6 +22,6 @@ Rook's running list. Add freely; strike through or delete once written.
 - How long should a tool description be? Context cost of descriptions across many tools, and whether the provider or the agent host decides what to send. Follow-up to the 2026-11-12 post
 - Testing tool selection: a small fixed set of requests run against the generated tool list whenever a description changes
 - Overlays for APIs you don't own: wrapping a vendor's OpenAPI as MCP tools without forking it
-- MCP or OpenAPI? When a generated MCP server adds nothing over a well-described OpenAPI document, and when it does. From a Bluesky thread (week of 2026-11-09) asking for any argument for MCP over OpenAPI
+- ~~MCP or OpenAPI? When a generated MCP server adds nothing over a well-described OpenAPI document, and when it does~~ (2026-11-26)
 - Should the MCP Registry's server.json carry an owner or support field, or does that belong in private registries? Follow-up to the 2026-11-19 post
 - MCP server incidents as API incidents: what a stolen session token behind an MCP connection means for rotation and revocation (several Bluesky posts in November about MCP OAuth flaws; read the vendors' own write-ups first)
