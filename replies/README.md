@@ -80,3 +80,27 @@ portal, set the app's permissions to Read and Write, then generate the Access To
 
 The workflows read these repository secrets: `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN` and
 `X_ACCESS_TOKEN_SECRET`. Regenerating the keys in the portal invalidates the old ones.
+
+## Mastodon replies
+
+Replies on Mastodon work like the Bluesky ones, as files in `replies/mastodon/` that
+`scripts/post-mastodon.mjs` posts when the PR merges:
+
+```markdown
+---
+reply_to: https://mastodon.social/@someone/123456789
+follow: true
+---
+
+The reply, plain text, at most 500 characters (a link counts as 23).
+```
+
+The post can be on any server. The script @mentions the author if the text doesn't, and keeps the
+reply unlisted when the post it answers isn't public. The Bluesky rules above apply here too. The
+weekly scout doesn't read Mastodon yet.
+
+### Setting up the Mastodon account
+
+Create an application on the account (Preferences, Development) with the `read` and `write`
+scopes. The workflows read the repository variable `MASTODON_INSTANCE` (for example
+`mastodon.social`) and the secret `MASTODON_ACCESS_TOKEN`.
