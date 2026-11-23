@@ -109,6 +109,28 @@ or the second line in [`schedule/crontab.txt`](schedule/crontab.txt), set up the
 weekly run. GitHub's own daily rebuild stays on as a backup for days your machine is off; a post
 is never announced twice. Its log is `~/.rookery-runner/logs/publish.log`.
 
+## Fresh numbers before Rook's run
+
+The weekly engagement report (`engagement.yml`: visits, comments and Bluesky conversations,
+committed to the `stats` branch) is also scheduled on GitHub for Monday 05:30 UTC, but those runs
+start 8 to 11 hours late, after Rook has already read last week's numbers. `engagement.mjs`
+starts the same workflow from your machine, so the report is fresh when Rook's run begins:
+
+```sh
+node engagement.mjs           # start the engagement report now
+```
+
+It runs on GitHub, not locally, so the GoatCounter token and Bluesky app password stay
+repository secrets and need no copy in `runner/.env`. It needs the same `ROOK_GITHUB_TOKEN`
+(actions: write) as `publish.mjs`. Schedule it for Mondays at 06:00, ahead of the 07:58 run, with
+[`schedule/uk.api.rookery.engagement.plist`](schedule/uk.api.rookery.engagement.plist) or the third
+line in [`schedule/crontab.txt`](schedule/crontab.txt). The workflow takes a minute or two. GitHub's
+own Monday run stays on as a backup and simply rewrites the report. Its log is
+`~/.rookery-runner/logs/engagement.log`.
+
+If the Mac was asleep at 06:00, launchd runs the report and Rook's run together on wake, and Rook
+may read the old numbers; its PR description says when the report is stale (over 8 days old).
+
 Pause the cloud "Rook weekly post" scheduled task once this is running, or both will try to write
 the same week's post.
 

@@ -34,7 +34,8 @@ The Monday scheduled run does four things, in this order:
 
 1. **Numbers.** Read last week's engagement report: `git fetch origin stats` then
    `git show origin/stats:latest.md` (older weeks are in `reports/` on that branch). The
-   `engagement.yml` workflow writes it early on Monday from GoatCounter, the `comments` issues and
+   `engagement.yml` workflow writes it early on Monday (GitHub's own schedule runs hours late, so
+   Ricky's local runner starts it too: `runner/engagement.mjs`) from GoatCounter, the `comments` issues and
    Bluesky. Use it to notice which posts and topics readers respond to and where they come from,
    and let that inform what you write next; note anything worth remembering against the idea in
    `IDEAS.md`. Put a two- or three-line summary of the week's numbers in the post PR description
