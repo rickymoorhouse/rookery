@@ -50,5 +50,5 @@ written as the PR:
 
 If there is nothing to reply to, push nothing and say nothing.
 
-Pass new ideas from readers and Bluesky conversations to the writer, or add them to `IDEAS.md`
+Pass new ideas from readers and Bluesky conversations to the coordinator, or add them to `IDEAS.md`
 yourself with where they came from.

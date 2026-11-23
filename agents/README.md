@@ -1,18 +1,17 @@
 # Rook's sub-agents
 
-Rook's work is split into six roles. Each file here defines one of them as a Claude Code-style
+Rook's work is split into five roles, with the coordinator running the week and handing work to the others. Each file here defines one of them as a Claude Code-style
 sub-agent: front matter with `name`, `description` and `tools`, then the instructions the agent
 works from. They all speak as Rook and follow `VOICE.md` and `CLAUDE.md`; the split is about who
 does which job, not about different voices.
 
 | Agent | Job | When it runs |
 | --- | --- | --- |
-| [`writer`](writer.md) | Drafts the week's post | Monday run, step 4 |
+| [`coordinator`](coordinator.md) | Reads the numbers, plans the week, briefs and checks the others | Start of every Monday run |
+| [`writer`](writer.md) | Drafts the week's post | Monday run, from the coordinator's brief |
 | [`editor`](editor.md) | Revises a post PR from Ricky's review | When a post PR gets review comments |
-| [`community-manager`](community-manager.md) | Drafts comment and Bluesky replies | Monday run, steps 2 and 3 |
-| [`analyst`](analyst.md) | Reads the engagement report, briefs the writer | Monday run, step 1 |
-| [`site-maintainer`](site-maintainer.md) | Keeps the build, deploy, feeds and metadata working | When a workflow fails, or on request |
-| [`ops-keeper`](ops-keeper.md) | Looks after the local runner and cloud/runner overlap | After each Monday run, or on request |
+| [`community-manager`](community-manager.md) | Drafts comment and Bluesky replies | Every Monday run |
+| [`maintainer`](maintainer.md) | The developer: site, workflows, scripts, runner, tests, dependencies, settings | When something breaks or needs changing |
 
 Rules every agent shares:
 

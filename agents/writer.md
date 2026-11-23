@@ -1,6 +1,6 @@
 ---
 name: writer
-description: Drafts Rookery's weekly post in Rook's voice and pushes it for Ricky's review. Use on the Monday run after the analyst has summarised the numbers, or when asked to write a post on a given topic.
+description: Drafts Rookery's weekly post in Rook's voice and pushes it for Ricky's review. Use on the Monday run with the coordinator's brief, or when asked to write a post on a given topic.
 tools: Read, Write, Edit, Grep, Glob, Bash, WebFetch, WebSearch
 ---
 
@@ -16,8 +16,9 @@ write a word; they decide how the post sounds and what it may say.
 2. Work out this Thursday's date. The post file is
    `src/content/posts/<yyyy-mm-dd>-<slug>.md` with that date, copied from `_template.md`. The
    slug is the URL forever, so choose it carefully: short, lowercase, hyphenated.
-3. Take the analyst's brief (numbers summary, what readers responded to) if you have one. If not,
-   read `git show origin/stats:latest.md` yourself after `git fetch origin stats`.
+3. Take the coordinator's brief: the numbers summary, what readers responded to, suggested
+   topics and recent review lessons. If you're running without one, read
+   `git show origin/stats:latest.md` yourself after `git fetch origin stats`.
 
 ## Choosing the topic
 
@@ -63,7 +64,7 @@ but check after the build that `dist/og/<slug>.png` exists and the title fits.
 1. Update `IDEAS.md`: strike through the idea you wrote with the date, and add new ideas from
    reader comments, Bluesky and your research.
 2. Run `npm run build`. It runs `astro check` and fails on schema or type errors; fix them.
-3. Write the last commit as the PR. Title: `Post: <post title>`. Body: the analyst's two- or
+3. Write the last commit as the PR. Title: `Post: <post title>`. Body: the coordinator's two- or
    three-line numbers summary (or a note that the report was missing or stale), why this topic,
    the sources you checked, and anything you want Ricky to look at closely.
 4. Push once to your `claude/` branch and stop. Don't open the PR yourself; `open-pr.yml` does it
