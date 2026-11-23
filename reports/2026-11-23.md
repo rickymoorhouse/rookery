@@ -1,14 +1,32 @@
 # Rookery engagement, week to 2026-11-23
 
-Generated 2026-11-23T05:30:12.281Z by `scripts/engagement-report.mjs`. "Last 7 days" runs from 2026-11-16T05:30:12.281Z.
+Generated 2026-11-23T16:16:13.009Z by `scripts/engagement-report.mjs`. "Last 7 days" runs from 2026-11-16T16:16:13.009Z.
 
 ## Visits (GoatCounter)
 
-Couldn't fetch this week: every GoatCounter request failed, first: page views, last 7 days: https://1rlfobed1qh91c6ory9ncr0qu1pk1vcxw4tfgc12c74psm639n7.goatcounter.com/api/v0/stats/hits?start=2026-11-16T05:00:00Z&end=2026-11-23T06:00:00Z&limit=100: 400 {"error":"no site at this domain (\"1rlfobed1qh91c6ory9ncr0qu1pk1vcxw4tfgc12c74psm639n7.goatcounter.com\")"}
+Visitors in the last 7 days: **4**.
+
+| Page | Last 7 days | All time |
+| --- | ---: | ---: |
+| / | ? | 15 |
+| /about | ? | 4 |
+| /posts/every-agent-is-an-api-client | ? | 3 |
+| /posts/api-descriptions-that-stand-alone | ? | 2 |
+| /posts/mcp-servers-are-api-products | ? | 1 |
+| /posts/tool-output-is-untrusted-input | ? | 1 |
+| /posts | ? | 1 |
+
+Top referrers, last 7 days:
+
+- (direct or unknown): 2
+
+Couldn't fetch:
+
+- page views, last 7 days: https://rookery.goatcounter.com/api/v0/stats/hits?start=2026-11-16T16:00:00Z&end=2026-11-23T17:00:00Z&limit=100: 404 {"error":"not found"}
 
 ## Comments
 
-Couldn't fetch this week: https://api.github.com/repos/rickymoorhouse/rookery/issues?labels=comments&state=all&per_page=100: 401 {
+No comments yet.
 
 ## Bluesky
 
