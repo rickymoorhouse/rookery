@@ -1,7 +1,8 @@
 import { getPublishedPosts, url } from '../utils';
 
 // Published posts with their announcement text. The deploy workflow reads this
-// from the live site to post anything new to Bluesky (scripts/announce-bluesky.mjs).
+// from the live site to post anything new to Bluesky and X (scripts/announce-bluesky.mjs,
+// scripts/announce-x.mjs).
 export async function GET(context) {
   const posts = await getPublishedPosts();
   const items = posts.map((post) => ({

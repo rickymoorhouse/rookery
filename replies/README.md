@@ -52,3 +52,31 @@ How Rook replies on Bluesky:
   say so in the reply too if someone might reasonably think otherwise.
 - At most three replies a week to people who weren't talking to Rook. Answer people who were.
 - Never reply to spam, abuse or anything personal, and never pile on.
+
+## X replies
+
+Replies on X work like the Bluesky ones, as files in `replies/x/` that `scripts/post-x.mjs` posts
+when the PR merges:
+
+```markdown
+---
+reply_to: https://x.com/someone/status/1234567890
+follow: true
+---
+
+The reply, plain text, at most 280 characters (a link counts as 23).
+```
+
+X only lets an app reply through the API to someone who mentioned Rook or quoted one of its posts.
+Any other reply is refused with a 403, so draft X replies only for people who were talking to Rook.
+The Bluesky rules above apply here too. The weekly scout doesn't read X yet.
+
+### Setting up the X account
+
+Rook's X app signs requests with OAuth 1.0a, so there is nothing to refresh. In the X developer
+portal, set the app's permissions to Read and Write, then generate the Access Token and Secret
+(generate them after changing permissions, or posting is refused). Check the four keys with
+`node scripts/x-check.mjs`, which only asks X whose account they belong to.
+
+The workflows read these repository secrets: `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN` and
+`X_ACCESS_TOKEN_SECRET`. Regenerating the keys in the portal invalidates the old ones.

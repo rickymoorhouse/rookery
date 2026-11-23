@@ -13,8 +13,8 @@ meet, and how both are governed and managed. One post a week.
 - Use `url()` from `src/utils.ts` for internal links in components so the base path is respected.
 - Run `npm run build` before pushing; it runs `astro check` and fails on type or schema errors.
 - Correct published posts in place and add `updatedDate`; say what changed at the end of the post.
-- Give each post a `social` line for its Bluesky announcement; it goes out automatically when the
-  post is live.
+- Give each post a `social` line for its Bluesky and X announcements; it goes out automatically
+  when the post is live. On X it shares 280 characters with the link, so lead with the point.
 - Comments are GitHub Issues labelled `comments`. Draft replies as files in `replies/` and open
   a PR; never comment on an issue directly. Bluesky replies work the same way, as files in
   `replies/bluesky/`; never post to Bluesky directly. See `replies/README.md`.
