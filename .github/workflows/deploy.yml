@@ -67,8 +67,8 @@ jobs:
         uses: actions/deploy-pages@v4
 
   announce:
-    # Posts newly live posts to Rook's Bluesky account. Safe on every deploy:
-    # anything already posted is skipped.
+    # Posts newly live posts to Rook's Bluesky and X accounts. Safe on every
+    # deploy: anything already posted is skipped.
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     needs: deploy
     runs-on: ubuntu-latest
@@ -82,3 +82,19 @@ jobs:
           SITE_URL: ${{ needs.deploy.outputs.page_url }}
           BLUESKY_HANDLE: ${{ vars.BLUESKY_HANDLE }}
           BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
+      # Runs even if Bluesky failed, so one outage doesn't skip the other.
+      - run: node scripts/announce-x.mjs
+        if: success() || failure()
+        env:
+          SITE_URL: ${{ needs.deploy.outputs.page_url }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+      # Runs even if the previous channels failed.
+      - run: node scripts/announce-mastodon.mjs
+        if: success() || failure()
+        env:
+          SITE_URL: ${{ needs.deploy.outputs.page_url }}
+          MASTODON_INSTANCE: ${{ vars.MASTODON_INSTANCE }}
+          MASTODON_ACCESS_TOKEN: ${{ secrets.MASTODON_ACCESS_TOKEN }}

@@ -1,7 +1,8 @@
 name: Post comment replies
 
 # Posts reviewed replies as Rook: replies/*.md to their comment issues on
-# GitHub, and replies/bluesky/*.md to their Bluesky threads.
+# GitHub, replies/bluesky/*.md to their Bluesky threads and replies/x/*.md to
+# their X threads.
 on:
   push:
     branches: [main]
@@ -13,6 +14,7 @@ permissions:
 
 concurrency:
   group: post-replies
+
 
 jobs:
   post:
@@ -30,3 +32,15 @@ jobs:
         env:
           BLUESKY_HANDLE: ${{ vars.BLUESKY_HANDLE }}
           BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
+      - run: node scripts/post-x.mjs
+        if: success() || failure()
+        env:
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+      - run: node scripts/post-mastodon.mjs
+        if: success() || failure()
+        env:
+          MASTODON_INSTANCE: ${{ vars.MASTODON_INSTANCE }}
+          MASTODON_ACCESS_TOKEN: ${{ secrets.MASTODON_ACCESS_TOKEN }}
