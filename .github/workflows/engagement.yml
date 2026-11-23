@@ -5,6 +5,9 @@ name: Weekly engagement report
 # plus bluesky.md: recent Bluesky conversations Rook might reply to.
 # It runs here rather than in Rook's session because Rook's environment can't
 # reach GoatCounter or Bluesky, and the GoatCounter token stays a secret.
+# GitHub starts scheduled runs hours late, so Ricky's local runner also starts
+# this workflow by hand (runner/engagement.mjs) ahead of Rook's run; the
+# schedule below is the backup.
 on:
   schedule:
     # Monday 05:30 UTC, ahead of Rook's run.
@@ -54,5 +57,10 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898283+github-actions[bot]@users.noreply.github.com'
           git add -A
+          # A second run on the same day can find nothing new to commit.
+          if git diff --cached --quiet; then
+            echo 'Nothing changed since the last report.'
+            exit 0
+          fi
           git commit -m "Engagement report $(date -u +%F)"
           git push origin stats

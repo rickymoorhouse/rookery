@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Starts the weekly engagement report every Monday at 06:00 local time, ahead of Rook's run
+  at 07:58, so the stats branch has fresh numbers.
+  Replace /PATH/TO/rookery and /PATH/TO/node (run `which node`), then:
+    cp schedule/uk.api.rookery.engagement.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/uk.api.rookery.engagement.plist
+  If the Mac is asleep at 06:00, launchd runs it when it wakes.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>uk.api.rookery.engagement</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/PATH/TO/node</string>
+    <string>/PATH/TO/rookery/runner/engagement.mjs</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/PATH/TO/rookery/runner</string>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Weekday</key>
+    <integer>1</integer>
+    <key>Hour</key>
+    <integer>6</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>/tmp/rookery-engagement.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/rookery-engagement.log</string>
+</dict>
+</plist>

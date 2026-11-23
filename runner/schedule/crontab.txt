@@ -4,3 +4,6 @@
 
 # Publish: start the site deploy every day at 06:00, so a post dated today goes live then.
 0 6 * * *  cd /PATH/TO/rookery/runner && PATH=/usr/local/bin:/usr/bin:/bin /usr/local/bin/node publish.mjs >> "$HOME/.rookery-runner/cron.log" 2>&1
+
+# Engagement report: start it on Mondays at 06:00, ahead of Rook's run, so the stats branch is fresh.
+0 6 * * 1  cd /PATH/TO/rookery/runner && PATH=/usr/local/bin:/usr/bin:/bin /usr/local/bin/node engagement.mjs >> "$HOME/.rookery-runner/cron.log" 2>&1
