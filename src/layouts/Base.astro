@@ -4,6 +4,7 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import { SITE_TITLE, SITE_DESCRIPTION, AUTHOR } from '../consts';
 import { url } from '../utils';
+import { goatcounterCode } from '../../scripts/lib/goatcounter.mjs';
 
 interface Props {
   title?: string;
@@ -30,7 +31,8 @@ const pageTitle = title ? `${title} · ${SITE_TITLE}` : `${SITE_TITLE}: APIs and
 const canonical = new URL(Astro.url.pathname, Astro.site);
 // GoatCounter site code (from the GOATCOUNTER_CODE repo variable). Only the
 // deploy build sets it, so local and pull request builds don't count visits.
-const goatcounter = import.meta.env.GOATCOUNTER_CODE;
+// A full dashboard URL works too; a value that isn't a site code is left out.
+const goatcounter = goatcounterCode(import.meta.env.GOATCOUNTER_CODE).code;
 const imageUrl = new URL(url(image), Astro.site).href;
 // Structured data so search engines know a post is an article, who wrote it and when.
 const jsonLd =

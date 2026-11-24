@@ -13,6 +13,7 @@
 
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { goatcounterCode } from './lib/goatcounter.mjs';
 
 const {
   OUT_DIR = 'stats',
@@ -32,18 +33,42 @@ const isoDay = (d) => d.toISOString().slice(0, 10);
 
 async function getJSON(url, headers = {}) {
   const res = await fetch(url, { headers });
-  if (!res.ok) throw new Error(`${url}: ${res.status} ${await res.text()}`);
+  if (!res.ok) {
+    const err = new Error(`${url}: ${res.status} ${(await res.text()).replace(/\s+/g, ' ').slice(0, 200)}`);
+    err.status = res.status;
+    throw err;
+  }
   return res.json();
 }
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// GoatCounter allows 4 requests a second and now and then answers a good
+// request with `404 {"error":"not found"}` (a different endpoint each week),
+// so its requests go one at a time and a 404, 429 or 5xx is tried again.
+async function getJSONRetry(url, headers, { tries = 3, wait = 2000 } = {}) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await getJSON(url, headers);
+    } catch (err) {
+      const transient = err.status === 404 || err.status === 429 || err.status >= 500;
+      if (!transient || attempt >= tries) throw err;
+      await sleep(wait * attempt);
+    }
+  }
+}
+
 
 // Post paths look like /posts/<slug>/; anything else is a site page.
 const slugOf = (path) => path.match(/(?:^|\/)posts\/([^/?#]+)/)?.[1];
 
 async function goatcounter() {
-  if (!GOATCOUNTER_CODE || !GOATCOUNTER_API_TOKEN) {
+  const { code, error } = goatcounterCode(GOATCOUNTER_CODE);
+  if (error) return error;
+  if (!code || !GOATCOUNTER_API_TOKEN) {
     return 'Not set up: needs the `GOATCOUNTER_CODE` variable and `GOATCOUNTER_API_TOKEN` secret.';
   }
-  const api = `https://${GOATCOUNTER_CODE}.goatcounter.com/api/v0`;
+  const api = `https://${code}.goatcounter.com/api/v0`;
   const headers = {
     Authorization: `Bearer ${GOATCOUNTER_API_TOKEN}`,
     'Content-Type': 'application/json',
@@ -58,18 +83,29 @@ async function goatcounter() {
   const end = hourISO(ceilHour(now));
   const range = (start) => `start=${hourISO(floorHour(start))}&end=${end}`;
   const hits = async (start) => {
-    const data = await getJSON(`${api}/stats/hits?${range(start)}&limit=100`, headers);
+    const data = await getJSONRetry(`${api}/stats/hits?${range(start)}&limit=100`, headers);
     return new Map(data.hits.map((h) => [h.path, h.count ?? h.count_unique ?? 0]));
   };
   // Each request stands alone: one failure is reported and the rest kept.
+  // They run in turn, not together, to stay under the rate limit.
   const requests = {
-    'page views, last 7 days': hits(weekAgo),
-    'page views, all time': hits(launch),
-    'visitor total': getJSON(`${api}/stats/total?${range(weekAgo)}`, headers),
-    'top referrers': getJSON(`${api}/stats/toprefs?${range(weekAgo)}&limit=10`, headers),
+    'page views, last 7 days': () => hits(weekAgo),
+    'page views, all time': () => hits(launch),
+    'visitor total': () => getJSONRetry(`${api}/stats/total?${range(weekAgo)}`, headers),
+    'top referrers': () => getJSONRetry(`${api}/stats/toprefs?${range(weekAgo)}&limit=10`, headers),
   };
   const names = Object.keys(requests);
-  const settled = await Promise.allSettled(Object.values(requests));
+  const settled = [];
+  for (const run of Object.values(requests)) {
+    settled.push(await run().then((value) => ({ status: 'fulfilled', value }), (reason) => ({ status: 'rejected', reason })));
+    await sleep(300);
+  }
+  if (settled.every((r) => r.reason?.status === 401)) {
+    throw new Error('GoatCounter rejected the API token (401). `GOATCOUNTER_API_TOKEN` needs a new key with "Read statistics".');
+  }
+  if (settled.every((r) => r.reason?.status === 403)) {
+    throw new Error('GoatCounter says the API token lacks permission (403). Give the key "Read statistics".');
+  }
   const failed = [];
   const [week, all, total, refs] = settled.map((r, i) => {
     if (r.status === 'fulfilled') return r.value;
@@ -117,11 +153,23 @@ async function comments() {
     Accept: 'application/vnd.github+json',
     ...(GITHUB_TOKEN && { Authorization: `Bearer ${GITHUB_TOKEN}` }),
   };
-  const issues = await getJSON(`${api}/issues?labels=comments&state=all&per_page=100`, headers);
-  if (issues.length === 0) return 'No comments yet.';
-  const recent = await getJSON(
+  // The repo is public, so a bad or expired token shouldn't lose the comments:
+  // on a 401, note it and read them without one.
+  let note = '';
+  const get = async (url) => {
+    try {
+      return await getJSON(url, headers);
+    } catch (err) {
+      if (err.status !== 401 || !headers.Authorization) throw err;
+      delete headers.Authorization;
+      note = '\n\n(GitHub rejected the token this run was given, so comments were read without one.)';
+      return getJSON(url, headers);
+    }
+  };
+  const issues = await get(`${api}/issues?labels=comments&state=all&per_page=100`);
+  if (issues.length === 0) return `No comments yet.${note}`;
+  const recent = await get(
     `${api}/issues/comments?since=${weekAgo.toISOString()}&per_page=100`,
-    headers,
   );
   const newCount = new Map();
   for (const c of recent) newCount.set(c.issue_url, (newCount.get(c.issue_url) ?? 0) + 1);
@@ -132,7 +180,7 @@ async function comments() {
     ...issues.map(
       (i) => `| ${slugOf(i.title) ?? i.title} | #${i.number} | ${newCount.get(i.url) ?? 0} | ${i.comments} |`,
     ),
-  ].join('\n');
+  ].join('\n') + note;
 }
 
 async function bluesky() {
@@ -170,10 +218,18 @@ async function section(title, fn) {
   }
 }
 
+// Say where the report came from, so a run from anywhere but this repo's
+// workflow stands out (see the 2026-11-23 report written outside Actions).
+const { GITHUB_ACTIONS, GITHUB_SERVER_URL, GITHUB_RUN_ID } = process.env;
+const source =
+  GITHUB_ACTIONS === 'true' && GITHUB_RUN_ID
+    ? `[workflow run ${GITHUB_RUN_ID}](${GITHUB_SERVER_URL ?? 'https://github.com'}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})`
+    : 'a run outside GitHub Actions';
+
 const report = [
   `# Rookery engagement, week to ${isoDay(now)}`,
   '',
-  `Generated ${now.toISOString()} by \`scripts/engagement-report.mjs\`. "Last 7 days" runs from ${weekAgo.toISOString()}.`,
+  `Generated ${now.toISOString()} by \`scripts/engagement-report.mjs\` in ${source}. "Last 7 days" runs from ${weekAgo.toISOString()}.`,
   '',
   await section('Visits (GoatCounter)', goatcounter),
   await section('Comments', comments),
